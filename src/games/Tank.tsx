@@ -10,6 +10,8 @@ const BULLET_W = 4,
   BULLET_H = 12;
 const ENEMY_W = 28,
   ENEMY_H = 28;
+const BONUS_W = 18,
+  BONUS_H = 18;
 
 interface Bullet {
   x: number;
@@ -41,6 +43,11 @@ interface Impact {
   maxRadius: number;
   life: number;
   color: string;
+}
+interface Bonus {
+  x: number;
+  y: number;
+  type: "multishot" | "gunheads";
 }
 
 const ENEMY_COLORS = [LCD.ink2, LCD.ink2, LCD.ink];
@@ -82,8 +89,11 @@ export const Tank: React.FC = () => {
   const enemies = useRef<Enemy[]>([]);
   const particles = useRef<Particle[]>([]);
   const impacts = useRef<Impact[]>([]);
+  const bonuses = useRef<Bonus[]>([]);
   const scoreRef = useRef(0);
   const livesRef = useRef(5);
+  const multishotCountRef = useRef(0); // 0-3, determines bullet count: 1 + count
+  const gunHeadsRef = useRef(1); // 1-4, number of heads shooting
   const rafRef = useRef<number>(0);
   const keysRef = useRef<Record<string, boolean>>({});
   const frameRef = useRef(0);
@@ -138,6 +148,19 @@ export const Tank: React.FC = () => {
     }
   };
 
+  const spawnBonus = (x: number, y: number) => {
+    // 40% chance to spawn a bonus
+    if (Math.random() > 0.3) return;
+
+    // 50% multishot, 50% gunheads
+    const type = Math.random() > 0.5 ? "multishot" : "gunheads";
+    bonuses.current.push({
+      x: x - BONUS_W / 2,
+      y,
+      type,
+    });
+  };
+
   const smash = (x: number, y: number, color: string) => {
     // Create radial impact rings
     impacts.current.push({
@@ -169,11 +192,22 @@ export const Tank: React.FC = () => {
     // Shoot
     if (shootCooldown.current > 0) shootCooldown.current--;
     if (keysRef.current[" "] && shootCooldown.current === 0) {
-      bullets.current.push({
-        x: p.x + TANK_W / 2 - BULLET_W / 2,
-        y: p.y - BULLET_H,
-        fromPlayer: true,
-      });
+      // Fire bullets from each gun head
+      for (let head = 0; head < gunHeadsRef.current; head++) {
+        const offsetX = (head - (gunHeadsRef.current - 1) / 2) * 10;
+
+        // Fire multishot bullets if bonus is active
+        for (let shot = 0; shot < 1 + multishotCountRef.current; shot++) {
+          const angleOffset = (shot - multishotCountRef.current / 2) * 0.15;
+          const bulletX = p.x + TANK_W / 2 - BULLET_W / 2 + offsetX;
+
+          bullets.current.push({
+            x: bulletX,
+            y: p.y - BULLET_H,
+            fromPlayer: true,
+          });
+        }
+      }
       shootCooldown.current = 15;
     }
 
@@ -282,6 +316,7 @@ export const Tank: React.FC = () => {
             e.hp--;
             if (e.hp <= 0) {
               explode(e.x + ENEMY_W / 2, e.y + ENEMY_H / 2, e.color);
+              spawnBonus(e.x + ENEMY_W / 2, e.y + ENEMY_H / 2);
               scoreRef.current += 100;
               setDisplayScore(scoreRef.current);
               updateScore(currentGame, scoreRef.current);
@@ -338,6 +373,63 @@ export const Tank: React.FC = () => {
       return imp.life > 0;
     });
 
+    // Bonuses
+    bonuses.current = bonuses.current.filter((bonus) => {
+      bonus.y += 2; // Fall speed
+      if (bonus.y > H + BONUS_H) return false;
+
+      // Draw bonus
+      if (bonus.type === "multishot") {
+        // Solid black circle
+        ctx.fillStyle = LCD.ink;
+        ctx.beginPath();
+        ctx.arc(
+          bonus.x + BONUS_W / 2,
+          bonus.y + BONUS_H / 2,
+          BONUS_W / 2,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      } else {
+        // Transparent with black border
+        ctx.strokeStyle = LCD.ink;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(
+          bonus.x + BONUS_W / 2,
+          bonus.y + BONUS_H / 2,
+          BONUS_W / 2,
+          0,
+          Math.PI * 2,
+        );
+        ctx.stroke();
+      }
+
+      // Check collision with player
+      if (
+        bonus.x + BONUS_W > p.x &&
+        bonus.x < p.x + TANK_W &&
+        bonus.y + BONUS_H > p.y &&
+        bonus.y < p.y + TANK_H
+      ) {
+        if (bonus.type === "multishot") {
+          // Increase multishot count (max 3)
+          multishotCountRef.current = Math.min(
+            3,
+            multishotCountRef.current + 1,
+          );
+        } else {
+          // Increase gun heads (max 5)
+          gunHeadsRef.current = Math.min(5, gunHeadsRef.current + 1);
+        }
+        explode(bonus.x + BONUS_W / 2, bonus.y + BONUS_H / 2, LCD.ink);
+        return false; // Remove bonus
+      }
+
+      return true;
+    });
+
     // Draw player
     drawTank(ctx, p.x, p.y, LCD.ink, TANK_W, TANK_H);
 
@@ -360,6 +452,10 @@ export const Tank: React.FC = () => {
     bullets.current = [];
     enemies.current = [];
     particles.current = [];
+    impacts.current = [];
+    bonuses.current = [];
+    multishotCountRef.current = 0;
+    gunHeadsRef.current = 1;
     playerPos.current = { x: W / 2 - TANK_W / 2, y: H - TANK_H - 20 };
     setDisplayScore(0);
     setDisplayLives(5);
