@@ -239,6 +239,8 @@ export const Tank: React.FC = () => {
     });
 
     // Bullets
+    const bulletsToRemove = new Set<Bullet>();
+
     bullets.current = bullets.current.filter((b) => {
       b.y += b.fromPlayer ? -8 : 5;
       if (b.y < -20 || b.y > H + 20) return false;
@@ -250,7 +252,7 @@ export const Tank: React.FC = () => {
         let hit = false;
 
         // Check collision with enemy bullets (defense mechanism)
-        bullets.current = bullets.current.filter((b2) => {
+        for (const b2 of bullets.current) {
           if (
             !b2.fromPlayer &&
             b.x + BULLET_W > b2.x &&
@@ -261,12 +263,13 @@ export const Tank: React.FC = () => {
             // Bullets cancel each other out
             explode((b.x + b2.x) / 2, (b.y + b2.y) / 2, LCD.ink2);
             smash((b.x + b2.x) / 2, (b.y + b2.y) / 2, LCD.ink);
+            bulletsToRemove.add(b);
+            bulletsToRemove.add(b2);
             hit = true;
-            return false; // Remove enemy bullet
+            break;
           }
-          return true;
-        });
-        if (hit) return false; // Remove player bullet
+        }
+        if (hit) return false;
 
         enemies.current = enemies.current.filter((e) => {
           if (
@@ -306,7 +309,7 @@ export const Tank: React.FC = () => {
           return false;
         }
       }
-      return true;
+      return !bulletsToRemove.has(b);
     });
 
     // Particles
@@ -359,8 +362,8 @@ export const Tank: React.FC = () => {
     particles.current = [];
     playerPos.current = { x: W / 2 - TANK_W / 2, y: H - TANK_H - 20 };
     setDisplayScore(0);
-    setDisplayLives(3);
-    setLives(3);
+    setDisplayLives(5);
+    setLives(5);
     setLevel(1);
     setSpeed(1);
     setStatus("playing");
