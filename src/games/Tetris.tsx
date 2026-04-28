@@ -4,7 +4,10 @@ import { LCD } from "./palette";
 
 const COLS = 10;
 const ROWS = 20;
-const CELL = 28;
+// Use a slightly narrower cell width so the playfield can fill the available
+// height on mobile even with the right-side LCD panel present.
+const CELL_W = 24;
+const CELL_H = 28;
 
 const TETROMINOES = [
   { shape: [[1, 1, 1, 1]], color: LCD.ink },
@@ -96,19 +99,21 @@ export const Tetris: React.FC = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const drawBlock = (col: number, row: number, color: string) => {
-      const x = col * CELL;
-      const y = row * CELL;
-      const pad = Math.max(1, Math.floor(CELL * 0.08));
-      const size = CELL - pad * 2;
+      const x = col * CELL_W;
+      const y = row * CELL_H;
+      const unit = Math.min(CELL_W, CELL_H);
+      const pad = Math.max(1, Math.floor(unit * 0.08));
+      const w = CELL_W - pad * 2;
+      const h = CELL_H - pad * 2;
 
       ctx.save();
       ctx.fillStyle = color;
       ctx.globalAlpha = 0.85;
-      ctx.fillRect(x + pad, y + pad, size, size);
+      ctx.fillRect(x + pad, y + pad, w, h);
       ctx.globalAlpha = 0.35;
       ctx.strokeStyle = color;
-      ctx.lineWidth = Math.max(1, Math.floor(CELL * 0.05));
-      ctx.strokeRect(x + pad + 0.5, y + pad + 0.5, size - 1, size - 1);
+      ctx.lineWidth = Math.max(1, Math.floor(unit * 0.05));
+      ctx.strokeRect(x + pad + 0.5, y + pad + 0.5, w - 1, h - 1);
       ctx.restore();
     };
 
@@ -279,8 +284,8 @@ export const Tetris: React.FC = () => {
       </div>
       <canvas
         ref={canvasRef}
-        width={COLS * CELL}
-        height={ROWS * CELL}
+        width={COLS * CELL_W}
+        height={ROWS * CELL_H}
         className="game-canvas"
       />
       <div className="game-controls">
