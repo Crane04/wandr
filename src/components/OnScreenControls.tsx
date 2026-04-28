@@ -99,14 +99,21 @@ export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
         },
         onPointerUp: (e: React.PointerEvent) => {
           e.preventDefault();
+          try {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+          } catch {
+            // ignore
+          }
           release(key);
         },
         onPointerCancel: (e: React.PointerEvent) => {
           e.preventDefault();
+          try {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+          } catch {
+            // ignore
+          }
           release(key);
-        },
-        onPointerLeave: (e: React.PointerEvent) => {
-          if (e.buttons === 0) release(key);
         },
         "aria-pressed": isDown,
       } as const;

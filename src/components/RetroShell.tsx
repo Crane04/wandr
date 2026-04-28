@@ -14,6 +14,7 @@ export const RetroShell: React.FC<{
   score: number;
   highScore: number;
   poweredOn: boolean;
+  lives: number | null;
   onSelectGame: (g: GameName) => void;
   controls?: React.ReactNode;
   children: React.ReactNode;
@@ -22,6 +23,7 @@ export const RetroShell: React.FC<{
   score,
   highScore,
   poweredOn,
+  lives,
   onSelectGame,
   controls,
   children,
@@ -54,6 +56,12 @@ export const RetroShell: React.FC<{
                   <span className="k">HI-SCORE</span>
                   <span className="v">{highScore.toString().padStart(5, "0")}</span>
                 </div>
+                {typeof lives === "number" ? (
+                  <div className="retro-side-row">
+                    <span className="k">LIVES</span>
+                    <span className="v retro-lives">{Array.from({ length: lives }, () => "♥").join(" ")}</span>
+                  </div>
+                ) : null}
                 <div className="retro-side-row">
                   <span className="k">LEVEL</span>
                   <span className="v">01</span>

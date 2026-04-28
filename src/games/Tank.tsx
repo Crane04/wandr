@@ -58,7 +58,7 @@ const drawTank = (
 };
 
 export const Tank: React.FC = () => {
-  const { status, setStatus, updateScore, currentGame } = useGame();
+  const { status, setStatus, updateScore, currentGame, setLives } = useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const playerPos = useRef({ x: W / 2 - TANK_W / 2, y: H - TANK_H - 20 });
   const bullets = useRef<Bullet[]>([]);
@@ -169,6 +169,7 @@ export const Tank: React.FC = () => {
       if (e.y > H + ENEMY_H) {
         livesRef.current--;
         setDisplayLives(livesRef.current);
+        setLives(livesRef.current);
         if (livesRef.current <= 0) {
           setStatus("gameover");
         }
@@ -185,6 +186,7 @@ export const Tank: React.FC = () => {
         explode(p.x + TANK_W / 2, p.y + TANK_H / 2, LCD.ink);
         livesRef.current--;
         setDisplayLives(livesRef.current);
+        setLives(livesRef.current);
         if (livesRef.current <= 0) {
           setStatus("gameover");
           return false;
@@ -239,6 +241,7 @@ export const Tank: React.FC = () => {
           explode(p.x + TANK_W / 2, p.y + TANK_H / 2, LCD.ink);
           livesRef.current--;
           setDisplayLives(livesRef.current);
+          setLives(livesRef.current);
           if (livesRef.current <= 0) setStatus("gameover");
           p.x = W / 2 - TANK_W / 2;
           p.y = H - TANK_H - 20;
@@ -264,7 +267,7 @@ export const Tank: React.FC = () => {
     drawTank(ctx, p.x, p.y, LCD.ink, TANK_W, TANK_H);
 
     rafRef.current = requestAnimationFrame(loop);
-  }, [spawnWave, setStatus, updateScore, currentGame]);
+  }, [spawnWave, setLives, setStatus, updateScore, currentGame]);
 
   const startGame = useCallback(() => {
     scoreRef.current = 0;
@@ -277,8 +280,9 @@ export const Tank: React.FC = () => {
     playerPos.current = { x: W / 2 - TANK_W / 2, y: H - TANK_H - 20 };
     setDisplayScore(0);
     setDisplayLives(3);
+    setLives(3);
     setStatus("playing");
-  }, [setStatus]);
+  }, [setLives, setStatus]);
 
   useEffect(() => {
     if (status === "playing") {

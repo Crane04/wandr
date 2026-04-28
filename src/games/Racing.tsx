@@ -58,7 +58,7 @@ const drawCar = (
 };
 
 export const Racing: React.FC = () => {
-  const { status, setStatus, updateScore, currentGame } = useGame();
+  const { status, setStatus, updateScore, currentGame, setLives } = useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const playerLane = useRef(1);
   const enemies = useRef<Enemy[]>([]);
@@ -204,8 +204,9 @@ export const Racing: React.FC = () => {
     playerLane.current = 1;
     roadOffset.current = 0;
     setDisplayScore(0);
+    setLives(null);
     setStatus("playing");
-  }, [setStatus]);
+  }, [setLives, setStatus]);
 
   useEffect(() => {
     if (status === "playing") {

@@ -26,8 +26,15 @@ const GAME_LABEL: Record<GameName, string> = {
 };
 
 export const App: React.FC = () => {
-  const { currentGame, setCurrentGame, scores, highScores, status, poweredOn } =
-    useGame();
+  const {
+    currentGame,
+    setCurrentGame,
+    scores,
+    highScores,
+    status,
+    poweredOn,
+    lives,
+  } = useGame();
 
   const GameView = useMemo(() => {
     switch (currentGame) {
@@ -52,6 +59,7 @@ export const App: React.FC = () => {
       score={scores[currentGame]}
       highScore={highScores[currentGame]}
       poweredOn={poweredOn}
+      lives={lives}
       onSelectGame={setCurrentGame}
       controls={<OnScreenControls currentGame={currentGame} />}
     >

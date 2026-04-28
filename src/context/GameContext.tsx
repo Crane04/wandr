@@ -29,6 +29,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [poweredOn, setPoweredOn] = useState(true);
+  const [lives, setLives] = useState<number | null>(null);
   const [currentGame, setCurrentGame] = useState<GameName>(() => {
     try {
       const saved = localStorage.getItem("brickgame-lastgame") as GameName | null;
@@ -52,6 +53,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     setCurrentGame(game);
     setStatus("idle");
     setScores((prev) => ({ ...prev, [game]: 0 }));
+    setLives(null);
   }, []);
 
   useEffect(() => {
@@ -97,6 +99,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const togglePower = useCallback(() => {
     setPoweredOn((prev) => !prev);
+    setLives(null);
   }, []);
 
   return (
@@ -105,12 +108,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
         currentGame,
         status,
         poweredOn,
+        lives,
         scores,
         highScores,
         setCurrentGame: handleSetCurrentGame,
         setStatus,
         setPoweredOn,
         togglePower,
+        setLives,
         updateScore,
       }}
     >

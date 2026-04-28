@@ -29,7 +29,7 @@ const makeBricks = (): Brick[] => {
 };
 
 export const BrickBreaker: React.FC = () => {
-  const { status, setStatus, updateScore, currentGame } = useGame();
+  const { status, setStatus, updateScore, currentGame, setLives } = useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const paddleX = useRef(W / 2 - PADDLE_W / 2);
   const ball = useRef<Ball>({ x: W / 2, y: H / 2, vx: 3, vy: -3 });
@@ -92,6 +92,7 @@ export const BrickBreaker: React.FC = () => {
     if (b.y + BALL_R > H) {
       livesRef.current--;
       setDisplayLives(livesRef.current);
+      setLives(livesRef.current);
       if (livesRef.current <= 0) {
         setStatus('gameover');
         return;
@@ -121,18 +122,19 @@ export const BrickBreaker: React.FC = () => {
 
     draw();
     rafRef.current = requestAnimationFrame(loop);
-  }, [draw, setStatus, updateScore, currentGame]);
+  }, [draw, setLives, setStatus, updateScore, currentGame]);
 
   const startGame = useCallback(() => {
     scoreRef.current = 0;
     livesRef.current = 3;
     setDisplayScore(0);
     setDisplayLives(3);
+    setLives(3);
     bricks.current = makeBricks();
     ball.current = { x: W / 2, y: H / 2, vx: 3, vy: -3 };
     paddleX.current = W / 2 - PADDLE_W / 2;
     setStatus('playing');
-  }, [setStatus]);
+  }, [setLives, setStatus]);
 
   useEffect(() => {
     if (status === 'playing') {

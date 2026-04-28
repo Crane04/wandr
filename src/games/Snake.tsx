@@ -27,7 +27,7 @@ const randFood = (snake: Point[]): Point => {
 };
 
 export const Snake: React.FC = () => {
-  const { status, setStatus, updateScore, currentGame } = useGame();
+  const { status, setStatus, updateScore, currentGame, setLives } = useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const startPos = useCallback(
     (): Point => ({ x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2) }),
@@ -116,8 +116,9 @@ export const Snake: React.FC = () => {
     food.current = randFood(snake.current);
     scoreRef.current = 0;
     setDisplayScore(0);
+    setLives(null);
     setStatus("playing");
-  }, [setStatus, startPos]);
+  }, [setLives, setStatus, startPos]);
 
   useEffect(() => {
     if (status === "playing") {

@@ -62,7 +62,7 @@ const rotate = (matrix: number[][]): number[][] => {
 };
 
 export const Tetris: React.FC = () => {
-  const { status, setStatus, updateScore, currentGame } = useGame();
+  const { status, setStatus, updateScore, currentGame, setLives } = useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const boardRef = useRef<Board>(emptyBoard());
   const pieceRef = useRef<{
@@ -206,12 +206,13 @@ export const Tetris: React.FC = () => {
     linesRef.current = 0;
     setDisplayScore(0);
     setDisplayLines(0);
+    setLives(null);
     pieceRef.current = randomPiece();
     setStatus("playing");
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(dropPiece, 500);
     draw();
-  }, [randomPiece, setStatus, dropPiece, draw]);
+  }, [randomPiece, setLives, setStatus, dropPiece, draw]);
 
   useEffect(() => {
     if (status === "playing") {

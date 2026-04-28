@@ -13,11 +13,13 @@ export interface GameState {
   currentGame: GameName;
   status: GameStatus;
   poweredOn: boolean;
+  lives: number | null;
   scores: GameScore;
   highScores: GameScore;
   setCurrentGame: (game: GameName) => void;
   setStatus: (status: GameStatus) => void;
   setPoweredOn: (on: boolean) => void;
   togglePower: () => void;
+  setLives: (lives: number | null) => void;
   updateScore: (game: GameName, score: number) => void;
 }
