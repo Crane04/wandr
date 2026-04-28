@@ -338,7 +338,8 @@ button {
   );
   color: rgba(0, 0, 0, 0.72);
   box-shadow:
-    0 10px 22px rgba(0, 0, 0, 0.3),
+    0 12px 0 rgba(124, 97, 0, 0.92),
+    0 22px 22px rgba(0, 0, 0, 0.3),
     0 -10px 18px rgba(255, 255, 255, 0.18) inset,
     0 0 0 2px rgba(0, 0, 0, 0.18) inset;
   cursor: pointer;
@@ -346,6 +347,11 @@ button {
   user-select: none;
   font-weight: 900;
   position: relative;
+  transform: translateY(-2px);
+  transition:
+    transform 90ms ease,
+    box-shadow 90ms ease,
+    filter 90ms ease;
 }
 
 .dpad[data-label]::after {
@@ -364,8 +370,18 @@ button {
 
 .dpad:active,
 .dpad[aria-pressed="true"] {
-  transform: translateY(1px);
-  filter: brightness(0.98);
+  transform: translateY(3px);
+  filter: brightness(0.97);
+  box-shadow:
+    0 6px 0 rgba(124, 97, 0, 0.92),
+    0 14px 16px rgba(0, 0, 0, 0.32),
+    0 -8px 14px rgba(255, 255, 255, 0.16) inset,
+    0 0 0 2px rgba(0, 0, 0, 0.18) inset;
+}
+
+.dpad:focus-visible {
+  outline: 2px solid rgba(0, 245, 255, 0.45);
+  outline-offset: 6px;
 }
 
 .dpad.up {
@@ -383,6 +399,7 @@ button {
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2) inset;
   color: rgba(0, 0, 0, 0.5);
   cursor: default;
+  transform: none;
 }
 .dpad.right {
   grid-column: 3;
@@ -470,13 +487,34 @@ button {
   );
   color: rgba(0, 0, 0, 0.72);
   box-shadow:
-    0 10px 22px rgba(0, 0, 0, 0.3),
+    0 10px 0 rgba(124, 97, 0, 0.92),
+    0 18px 22px rgba(0, 0, 0, 0.3),
     0 -10px 18px rgba(255, 255, 255, 0.18) inset,
     0 0 0 2px rgba(0, 0, 0, 0.18) inset;
   cursor: pointer;
   font-size: 11px;
   letter-spacing: 0.6px;
   touch-action: none;
+  transform: translateY(-2px);
+  transition:
+    transform 90ms ease,
+    box-shadow 90ms ease,
+    filter 90ms ease;
+}
+
+.retro-small-btn:active {
+  transform: translateY(2px);
+  filter: brightness(0.97);
+  box-shadow:
+    0 5px 0 rgba(124, 97, 0, 0.92),
+    0 10px 16px rgba(0, 0, 0, 0.32),
+    0 -8px 14px rgba(255, 255, 255, 0.16) inset,
+    0 0 0 2px rgba(0, 0, 0, 0.18) inset;
+}
+
+.retro-small-btn:focus-visible {
+  outline: 2px solid rgba(0, 245, 255, 0.45);
+  outline-offset: 6px;
 }
 
 .retro-leds {
@@ -522,19 +560,35 @@ button {
   );
   color: rgba(0, 0, 0, 0.55);
   box-shadow:
-    0 12px 26px rgba(0, 0, 0, 0.35),
+    0 14px 0 rgba(124, 97, 0, 0.92),
+    0 26px 26px rgba(0, 0, 0, 0.35),
     0 -12px 20px rgba(255, 255, 255, 0.2) inset,
     0 0 0 2px rgba(0, 0, 0, 0.18) inset;
   cursor: pointer;
   font-weight: 900;
   touch-action: none;
   user-select: none;
+  transform: translateY(-3px);
+  transition:
+    transform 90ms ease,
+    box-shadow 90ms ease,
+    filter 90ms ease;
 }
 
 .action-btn:active,
 .action-btn[aria-pressed="true"] {
-  transform: translateY(1px);
-  filter: brightness(0.98);
+  transform: translateY(3px);
+  filter: brightness(0.97);
+  box-shadow:
+    0 7px 0 rgba(124, 97, 0, 0.92),
+    0 14px 18px rgba(0, 0, 0, 0.35),
+    0 -10px 18px rgba(255, 255, 255, 0.18) inset,
+    0 0 0 2px rgba(0, 0, 0, 0.18) inset;
+}
+
+.action-btn:focus-visible {
+  outline: 2px solid rgba(0, 245, 255, 0.45);
+  outline-offset: 8px;
 }
 
 .action-label {
@@ -602,6 +656,28 @@ button {
   border: 1px solid var(--border);
   background: rgba(0, 0, 0, 0.22);
   cursor: pointer;
+  transform: translateY(-1px);
+  box-shadow:
+    0 6px 0 rgba(0, 0, 0, 0.35),
+    0 12px 18px rgba(0, 0, 0, 0.25);
+  transition:
+    transform 90ms ease,
+    box-shadow 90ms ease,
+    border-color 120ms ease;
+}
+
+.btn-start:active,
+.btn-pause:active {
+  transform: translateY(2px);
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.35),
+    0 7px 12px rgba(0, 0, 0, 0.28);
+}
+
+.btn-start:focus-visible,
+.btn-pause:focus-visible {
+  outline: 2px solid rgba(0, 245, 255, 0.45);
+  outline-offset: 4px;
 }
 
 .btn-start:hover,

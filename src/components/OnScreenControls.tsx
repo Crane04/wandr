@@ -116,11 +116,11 @@ export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
 
   const action = useMemo(() => {
     if (currentGame === "tetris")
-      return { key: "ArrowUp" as const, label: "ROTATE" };
-    if (currentGame === "tank") return { key: " " as const, label: "SHOOT" };
+      return { key: "ArrowUp" as const, label: "" };
+    if (currentGame === "tank") return { key: " " as const, label: "" };
     if (currentGame === "brickbreaker")
-      return { key: " " as const, label: "ACTION" };
-    return { key: " " as const, label: "ACTION" };
+      return { key: " " as const, label: "" };
+    return { key: " " as const, label: "" };
   }, [currentGame]);
 
   return (
@@ -129,7 +129,7 @@ export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
         <button
           className="dpad up"
           type="button"
-          data-label="UP"
+          // data-label="UP"
           {...bind("ArrowUp")}
         >
           ▲
@@ -137,7 +137,7 @@ export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
         <button
           className="dpad left"
           type="button"
-          data-label="LEFT"
+          // data-label="LEFT"
           {...bind("ArrowLeft")}
         >
           ◀
@@ -146,7 +146,7 @@ export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
         <button
           className="dpad right"
           type="button"
-          data-label="RIGHT"
+          // data-label="RIGHT"
           {...bind("ArrowRight")}
         >
           ▶
@@ -154,7 +154,7 @@ export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
         <button
           className="dpad down"
           type="button"
-          data-label="DOWN"
+          // data-label="DOWN"
           {...bind("ArrowDown")}
         >
           ▼
