@@ -3,7 +3,7 @@ import { useGame } from "../context/GameContext";
 import { LCD } from "./palette";
 
 const W = 280,
-  H = 400;
+  H = 520;
 const TANK_W = 30,
   TANK_H = 30;
 const BULLET_W = 4,
@@ -31,6 +31,14 @@ interface Particle {
   y: number;
   vx: number;
   vy: number;
+  life: number;
+  color: string;
+}
+interface Impact {
+  x: number;
+  y: number;
+  radius: number;
+  maxRadius: number;
   life: number;
   color: string;
 }
@@ -73,8 +81,9 @@ export const Tank: React.FC = () => {
   const bullets = useRef<Bullet[]>([]);
   const enemies = useRef<Enemy[]>([]);
   const particles = useRef<Particle[]>([]);
+  const impacts = useRef<Impact[]>([]);
   const scoreRef = useRef(0);
-  const livesRef = useRef(3);
+  const livesRef = useRef(5);
   const rafRef = useRef<number>(0);
   const keysRef = useRef<Record<string, boolean>>({});
   const frameRef = useRef(0);
@@ -127,6 +136,18 @@ export const Tank: React.FC = () => {
         color,
       });
     }
+  };
+
+  const smash = (x: number, y: number, color: string) => {
+    // Create radial impact rings
+    impacts.current.push({
+      x,
+      y,
+      radius: 0,
+      maxRadius: 24,
+      life: 15,
+      color,
+    });
   };
 
   const loop = useCallback(() => {
@@ -227,6 +248,26 @@ export const Tank: React.FC = () => {
 
       if (b.fromPlayer) {
         let hit = false;
+
+        // Check collision with enemy bullets (defense mechanism)
+        bullets.current = bullets.current.filter((b2) => {
+          if (
+            !b2.fromPlayer &&
+            b.x + BULLET_W > b2.x &&
+            b.x < b2.x + BULLET_W &&
+            b.y < b2.y + BULLET_H &&
+            b.y + BULLET_H > b2.y
+          ) {
+            // Bullets cancel each other out
+            explode((b.x + b2.x) / 2, (b.y + b2.y) / 2, LCD.ink2);
+            smash((b.x + b2.x) / 2, (b.y + b2.y) / 2, LCD.ink);
+            hit = true;
+            return false; // Remove enemy bullet
+          }
+          return true;
+        });
+        if (hit) return false; // Remove player bullet
+
         enemies.current = enemies.current.filter((e) => {
           if (
             !hit &&
@@ -278,6 +319,20 @@ export const Tank: React.FC = () => {
       ctx.fillRect(pt.x, pt.y, 4, 4);
       ctx.globalAlpha = 1;
       return pt.life > 0;
+    });
+
+    // Impact smashing effects
+    impacts.current = impacts.current.filter((imp) => {
+      imp.radius = (imp.maxRadius * (15 - imp.life)) / 15;
+      imp.life--;
+      ctx.strokeStyle = imp.color;
+      ctx.globalAlpha = (imp.life / 15) * 0.8;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(imp.x, imp.y, imp.radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      return imp.life > 0;
     });
 
     // Draw player
