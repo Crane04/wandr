@@ -47,7 +47,7 @@ interface Impact {
 interface Bonus {
   x: number;
   y: number;
-  type: "multishot" | "gunheads";
+  type: "multishot" | "gunheads" | "lives";
 }
 
 const ENEMY_COLORS = [LCD.ink2, LCD.ink2, LCD.ink];
@@ -149,11 +149,19 @@ export const Tank: React.FC = () => {
   };
 
   const spawnBonus = (x: number, y: number) => {
-    // 40% chance to spawn a bonus
+    // 30% chance to spawn a bonus
     if (Math.random() > 0.3) return;
 
-    // 50% multishot, 50% gunheads
-    const type = Math.random() > 0.5 ? "multishot" : "gunheads";
+    // 33% multishot, 33% gunheads, 33% lives
+    const rand = Math.random();
+    let type: "multishot" | "gunheads" | "lives";
+    if (rand < 0.33) {
+      type = "multishot";
+    } else if (rand < 0.66) {
+      type = "gunheads";
+    } else {
+      type = "lives";
+    }
     bonuses.current.push({
       x: x - BONUS_W / 2,
       y,
@@ -219,6 +227,9 @@ export const Tank: React.FC = () => {
       wave.current++;
     }
 
+    // Track if player was hit this frame to prevent multiple hits
+    let playerHitThisFrame = false;
+
     // Update enemies
     enemies.current = enemies.current.filter((e) => {
       e.x += e.vx;
@@ -250,22 +261,23 @@ export const Tank: React.FC = () => {
 
       // Player collision
       if (
+        !playerHitThisFrame &&
         e.y + ENEMY_H > p.y &&
         e.y < p.y + TANK_H &&
         e.x + ENEMY_W > p.x &&
         e.x < p.x + TANK_W
       ) {
+        playerHitThisFrame = true;
         explode(p.x + TANK_W / 2, p.y + TANK_H / 2, LCD.ink);
         livesRef.current--;
         setDisplayLives(livesRef.current);
         setLives(livesRef.current);
         if (livesRef.current <= 0) {
           setStatus("gameover");
-          return false;
         }
         p.x = W / 2 - TANK_W / 2;
         p.y = H - TANK_H - 20;
-        return false;
+        return false; // Remove this enemy
       }
 
       drawTank(ctx, e.x, e.y, e.color, ENEMY_W, ENEMY_H, Math.PI);
@@ -391,7 +403,7 @@ export const Tank: React.FC = () => {
           Math.PI * 2,
         );
         ctx.fill();
-      } else {
+      } else if (bonus.type === "gunheads") {
         // Transparent with black border
         ctx.strokeStyle = LCD.ink;
         ctx.lineWidth = 2;
@@ -403,6 +415,23 @@ export const Tank: React.FC = () => {
           0,
           Math.PI * 2,
         );
+        ctx.stroke();
+      } else {
+        // Lives bonus: cross pattern (like a plus sign)
+        ctx.strokeStyle = LCD.ink;
+        ctx.lineWidth = 2;
+        const cx = bonus.x + BONUS_W / 2;
+        const cy = bonus.y + BONUS_H / 2;
+        const size = BONUS_W / 2.5;
+        // Horizontal line
+        ctx.beginPath();
+        ctx.moveTo(cx - size, cy);
+        ctx.lineTo(cx + size, cy);
+        ctx.stroke();
+        // Vertical line
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - size);
+        ctx.lineTo(cx, cy + size);
         ctx.stroke();
       }
 
@@ -419,9 +448,14 @@ export const Tank: React.FC = () => {
             3,
             multishotCountRef.current + 1,
           );
-        } else {
+        } else if (bonus.type === "gunheads") {
           // Increase gun heads (max 5)
           gunHeadsRef.current = Math.min(5, gunHeadsRef.current + 1);
+        } else {
+          // Increase lives (max 8)
+          livesRef.current = Math.min(8, livesRef.current + 1);
+          setDisplayLives(livesRef.current);
+          setLives(livesRef.current);
         }
         explode(bonus.x + BONUS_W / 2, bonus.y + BONUS_H / 2, LCD.ink);
         return false; // Remove bonus

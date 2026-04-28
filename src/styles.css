@@ -636,17 +636,18 @@ button {
 
   .retro-controls {
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px;
+    gap: 6px;
   }
 
   .retro-mid {
     transform: none;
-    margin-top: 55px;
+    margin-top: 155px;
     gap: 8px;
   }
 
   .retro-dpad {
     --dpad: clamp(42px, 12vw, 50px);
+    gap: clamp(4px, 1.5vw, 6px);
   }
 
   .retro-ab {
