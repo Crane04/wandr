@@ -351,7 +351,7 @@ export const Tank: React.FC = () => {
 
   const startGame = useCallback(() => {
     scoreRef.current = 0;
-    livesRef.current = 3;
+    livesRef.current = 5;
     frameRef.current = 0;
     wave.current = 1;
     bullets.current = [];
