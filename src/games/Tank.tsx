@@ -89,7 +89,7 @@ export const Tank: React.FC = () => {
   const frameRef = useRef(0);
   const shootCooldown = useRef(0);
   const [displayScore, setDisplayScore] = useState(0);
-  const [displayLives, setDisplayLives] = useState(3);
+  const [displayLives, setDisplayLives] = useState(5);
   const wave = useRef(1);
 
   const spawnWave = useCallback((level: number) => {
