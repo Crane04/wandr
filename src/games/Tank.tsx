@@ -59,8 +59,15 @@ const drawTank = (
 };
 
 export const Tank: React.FC = () => {
-  const { status, setStatus, updateScore, currentGame, setLives, setLevel, setSpeed } =
-    useGame();
+  const {
+    status,
+    setStatus,
+    updateScore,
+    currentGame,
+    setLives,
+    setLevel,
+    setSpeed,
+  } = useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const playerPos = useRef({ x: W / 2 - TANK_W / 2, y: H - TANK_H - 20 });
   const bullets = useRef<Bullet[]>([]);
@@ -78,7 +85,8 @@ export const Tank: React.FC = () => {
 
   const spawnWave = useCallback((level: number) => {
     const clampedLevel = Math.max(1, Math.min(30, level));
-    const count = Math.min(18, 2 + clampedLevel); // start slower, ramp up
+    // Start with 2 enemies at level 1, increase by 1 per level, cap at 12
+    const count = Math.min(12, 1 + Math.floor(clampedLevel / 2));
     for (let i = 0; i < count; i++) {
       const col = Math.floor(Math.random() * 6);
       const baseVy = 0.6 + clampedLevel * 0.12;
