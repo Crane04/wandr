@@ -311,6 +311,7 @@ button {
   gap: 14px;
   padding: 0;
   justify-items: center;
+  touch-action: none;
 }
 
 .retro-dpad {
@@ -321,6 +322,7 @@ button {
   gap: clamp(8px, 2.6vw, 10px);
   justify-content: start;
   align-items: center;
+  pointer-events: auto;
 }
 
 .dpad {
@@ -474,6 +476,7 @@ button {
   cursor: pointer;
   font-size: 11px;
   letter-spacing: 0.6px;
+  touch-action: none;
 }
 
 .retro-leds {
@@ -643,7 +646,7 @@ button {
   }
 
   .retro-dpad {
-    --dpad: clamp(36px, 10.5vw, 44px);
+    --dpad: clamp(42px, 12vw, 50px);
   }
 
   .retro-ab {

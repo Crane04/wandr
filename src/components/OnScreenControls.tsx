@@ -92,28 +92,21 @@ export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
       const isDown = pressed.has(key);
       return {
         onPointerDown: (e: React.PointerEvent) => {
-          e.currentTarget.setPointerCapture(e.pointerId);
           e.preventDefault();
           if (!poweredOn) return;
           if (!pressed.has(key)) press(key);
         },
         onPointerUp: (e: React.PointerEvent) => {
           e.preventDefault();
-          try {
-            e.currentTarget.releasePointerCapture(e.pointerId);
-          } catch {
-            // ignore
-          }
           release(key);
         },
         onPointerCancel: (e: React.PointerEvent) => {
           e.preventDefault();
-          try {
-            e.currentTarget.releasePointerCapture(e.pointerId);
-          } catch {
-            // ignore
-          }
           release(key);
+        },
+        onPointerLeave: (e: React.PointerEvent) => {
+          // Only release if no buttons are pressed
+          if (e.buttons === 0) release(key);
         },
         "aria-pressed": isDown,
       } as const;
