@@ -28,6 +28,7 @@ const GAME_ORDER: GameName[] = [
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const [poweredOn, setPoweredOn] = useState(true);
   const [currentGame, setCurrentGame] = useState<GameName>(() => {
     try {
       const saved = localStorage.getItem("brickgame-lastgame") as GameName | null;
@@ -54,6 +55,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   useEffect(() => {
+    if (!poweredOn) setStatus("idle");
+  }, [poweredOn]);
+
+  useEffect(() => {
     try {
       localStorage.setItem("brickgame-lastgame", currentGame);
     } catch {
@@ -64,6 +69,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      if (!poweredOn) return;
       if (status !== "idle") return;
 
       const idx = GAME_ORDER.indexOf(currentGame);
@@ -75,7 +81,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [currentGame, handleSetCurrentGame, status]);
+  }, [currentGame, handleSetCurrentGame, poweredOn, status]);
 
   const updateScore = useCallback((game: GameName, score: number) => {
     setScores((prev) => ({ ...prev, [game]: score }));
@@ -89,15 +95,22 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   }, []);
 
+  const togglePower = useCallback(() => {
+    setPoweredOn((prev) => !prev);
+  }, []);
+
   return (
     <GameContext.Provider
       value={{
         currentGame,
         status,
+        poweredOn,
         scores,
         highScores,
         setCurrentGame: handleSetCurrentGame,
         setStatus,
+        setPoweredOn,
+        togglePower,
         updateScore,
       }}
     >

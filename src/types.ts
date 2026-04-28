@@ -12,10 +12,12 @@ export interface GameScore {
 export interface GameState {
   currentGame: GameName;
   status: GameStatus;
+  poweredOn: boolean;
   scores: GameScore;
   highScores: GameScore;
   setCurrentGame: (game: GameName) => void;
   setStatus: (status: GameStatus) => void;
+  setPoweredOn: (on: boolean) => void;
+  togglePower: () => void;
   updateScore: (game: GameName, score: number) => void;
 }
-

@@ -13,13 +13,22 @@ export const RetroShell: React.FC<{
   currentGame: GameName;
   score: number;
   highScore: number;
+  poweredOn: boolean;
   onSelectGame: (g: GameName) => void;
   controls?: React.ReactNode;
   children: React.ReactNode;
-}> = ({ currentGame, score, highScore, onSelectGame, controls, children }) => {
+}> = ({
+  currentGame,
+  score,
+  highScore,
+  poweredOn,
+  onSelectGame,
+  controls,
+  children,
+}) => {
   return (
     <div className="retro">
-      <div className="retro-device">
+      <div className="retro-device" data-power={poweredOn ? "on" : "off"}>
         <div className="retro-holes retro-holes-left" aria-hidden="true" />
         <div className="retro-holes retro-holes-right" aria-hidden="true" />
         <div className="retro-screen-frame">
@@ -54,6 +63,9 @@ export const RetroShell: React.FC<{
                   <span className="v">01</span>
                 </div>
               </aside>
+              {!poweredOn ? (
+                <div className="retro-power-off" aria-hidden="true" />
+              ) : null}
             </div>
           </div>
         </div>

@@ -2,8 +2,10 @@ import React, { useEffect, useRef, useCallback, useState } from "react";
 import { useGame } from "../context/GameContext";
 import { LCD } from "./palette";
 
-const COLS = 20,
-  ROWS = 20,
+// Match the other games' playfield aspect (280x560) so it uses the full
+// available height in the retro screen.
+const COLS = 14,
+  ROWS = 28,
   CELL = 20;
 const W = COLS * CELL,
   H = ROWS * CELL;
@@ -27,7 +29,11 @@ const randFood = (snake: Point[]): Point => {
 export const Snake: React.FC = () => {
   const { status, setStatus, updateScore, currentGame } = useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const snake = useRef<Point[]>([{ x: 10, y: 10 }]);
+  const startPos = useCallback(
+    (): Point => ({ x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2) }),
+    [],
+  );
+  const snake = useRef<Point[]>([startPos()]);
   const dir = useRef<Point>({ x: 1, y: 0 });
   const nextDir = useRef<Point>({ x: 1, y: 0 });
   const food = useRef<Point>({ x: 5, y: 5 });
@@ -39,7 +45,15 @@ export const Snake: React.FC = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
-    ctx.clearRect(0, 0, W, H);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Visible playfield boundary so it's always clear where the "walls" are,
+    // even when CSS borders are disabled (retro mode).
+    ctx.save();
+    ctx.strokeStyle = "rgba(45, 59, 42, 0.35)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, W - 2, H - 2);
+    ctx.restore();
 
     const { x: fx, y: fy } = food.current;
     ctx.fillStyle = LCD.ink;
@@ -96,14 +110,14 @@ export const Snake: React.FC = () => {
   }, [draw, setStatus, updateScore, currentGame]);
 
   const startGame = useCallback(() => {
-    snake.current = [{ x: 10, y: 10 }];
+    snake.current = [startPos()];
     dir.current = { x: 1, y: 0 };
     nextDir.current = { x: 1, y: 0 };
     food.current = randFood(snake.current);
     scoreRef.current = 0;
     setDisplayScore(0);
     setStatus("playing");
-  }, [setStatus]);
+  }, [setStatus, startPos]);
 
   useEffect(() => {
     if (status === "playing") {
