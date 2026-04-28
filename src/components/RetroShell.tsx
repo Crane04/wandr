@@ -39,14 +39,20 @@ export const RetroShell: React.FC<{
         <div className="retro-holes retro-holes-right" aria-hidden="true" />
         <div className="retro-screen-frame">
           <div className="retro-screen-top">
-            <div className="retro-screen-title">HI-SCORE/SCORE</div>
+            <div className="retro-screen-title">wandr by <a href="https://crane04.dev" target="_blank" rel="noopener noreferrer">
+              crane04
+            </a></div>
             <div className="retro-scoreline">
-              <span className="retro-score">{highScore.toString().padStart(5, "0")}</span>
-              <span className="retro-score">{score.toString().padStart(5, "0")}</span>
+              <span className="retro-score">
+                {highScore.toString().padStart(5, "0")}
+              </span>
+              <span className="retro-score">
+                {score.toString().padStart(5, "0")}
+              </span>
             </div>
           </div>
 
-            <div className="retro-screen">
+          <div className="retro-screen">
             <div className="retro-lcd">
               <div className="retro-game">
                 <div className="retro-playfield">{children}</div>
@@ -58,12 +64,16 @@ export const RetroShell: React.FC<{
                 </div>
                 <div className="retro-side-row">
                   <span className="k">HI-SCORE</span>
-                  <span className="v">{highScore.toString().padStart(5, "0")}</span>
+                  <span className="v">
+                    {highScore.toString().padStart(5, "0")}
+                  </span>
                 </div>
                 {typeof lives === "number" ? (
                   <div className="retro-side-row">
                     <span className="k">LIVES</span>
-                    <span className="v retro-lives">{Array.from({ length: lives }, () => "♥").join(" ")}</span>
+                    <span className="v retro-lives">
+                      {Array.from({ length: lives }, () => "♥").join(" ")}
+                    </span>
                   </div>
                 ) : null}
                 <div className="retro-side-row">
