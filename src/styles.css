@@ -1,0 +1,731 @@
+:root {
+  color-scheme: dark;
+  --bg: #07070c;
+  --text: rgba(255, 255, 255, 0.92);
+  --muted: rgba(255, 255, 255, 0.6);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Helvetica,
+    Arial,
+    "Apple Color Emoji",
+    "Segoe UI Emoji";
+  background:
+    radial-gradient(
+      1200px 700px at 50% -120px,
+      rgba(0, 245, 255, 0.16),
+      transparent 60%
+    ),
+    radial-gradient(
+      900px 500px at 15% 30%,
+      rgba(255, 23, 68, 0.12),
+      transparent 60%
+    ),
+    radial-gradient(
+      900px 500px at 85% 40%,
+      rgba(213, 0, 249, 0.1),
+      transparent 60%
+    ),
+    var(--bg);
+  color: var(--text);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.retro {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.retro-device {
+  width: min(420px, 96vw);
+  max-height: 920px;
+  height: min(920px, 96dvh);
+  border-radius: 22px;
+  padding: 14px 18px 34px;
+  background: linear-gradient(180deg, #2fa9ff 0%, #1b86e6 40%, #0f6fcc 100%);
+  box-shadow:
+    0 26px 80px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.18) inset,
+    0 -10px 30px rgba(0, 0, 0, 0.25) inset;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .retro-device {
+    width: 100vw;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+  }
+}
+
+.retro-holes {
+  position: absolute;
+  top: 18px;
+  width: 26px;
+  height: 110px;
+  border-radius: 18px;
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.45) 2px, transparent 3px)
+    0 0 / 10px 10px;
+  opacity: 0.55;
+  filter: blur(0.2px);
+}
+
+.retro-holes-left {
+  left: 10px;
+}
+
+.retro-holes-right {
+  right: 10px;
+}
+
+.retro-screen-frame {
+  border-radius: 18px;
+  padding: 10px 10px 12px;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 18, 28, 0.85),
+    rgba(10, 18, 28, 0.6)
+  );
+  box-shadow:
+    0 10px 35px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+  flex: 0 1 auto;
+  min-height: 0;
+  height: clamp(520px, 62dvh, 640px);
+}
+
+.retro-screen-top {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 4px 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 10px;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+}
+
+.retro-scoreline {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.retro-score {
+  display: inline-block;
+  min-width: 54px;
+  text-align: right;
+}
+
+.retro-screen {
+  border-radius: 14px;
+  padding: 10px;
+  background: linear-gradient(180deg, #8f9a7f, #7f8a70);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.35) inset,
+    0 10px 26px rgba(0, 0, 0, 0.35);
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.retro-lcd {
+  border-radius: 10px;
+  padding: 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(230, 235, 223, 0.7),
+    rgba(215, 224, 205, 0.65)
+  );
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.25) inset,
+    0 14px 40px rgba(0, 0, 0, 0.18) inset;
+  display: grid;
+  grid-template-columns: 1fr 92px;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.retro-game {
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(90, 104, 86, 0.25);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15) inset;
+  padding: 6px;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.retro-playfield {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  background: transparent;
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.35) inset,
+    0 10px 24px rgba(0, 0, 0, 0.28);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 520px) {
+  .retro-game {
+    height: 100%;
+  }
+}
+
+.retro-side {
+  border-left: 1px solid rgba(0, 0, 0, 0.25);
+  padding-left: 10px;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  color: rgba(0, 0, 0, 0.75);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 10px;
+}
+
+.retro-side-row {
+  display: grid;
+  gap: 2px;
+}
+
+.retro-side-row .k {
+  opacity: 0.8;
+}
+
+.retro-side-row .v {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.retro-game-tabs {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.retro-tab {
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  font-size: 12px;
+  letter-spacing: 0.2px;
+}
+
+.retro-tab:hover {
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.retro-tab-active {
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2) inset;
+}
+
+.retro-bottom {
+  margin-top: 0;
+  padding: 44px 0px 22px;
+  flex: 0 0 auto;
+}
+
+.retro-controls {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 0;
+  justify-items: center;
+}
+
+.retro-dpad {
+  --dpad: clamp(40px, 12vw, 46px);
+  display: grid;
+  grid-template-columns: var(--dpad) var(--dpad) var(--dpad);
+  grid-template-rows: var(--dpad) var(--dpad) var(--dpad);
+  gap: clamp(8px, 2.6vw, 10px);
+  justify-content: start;
+  align-items: center;
+}
+
+.dpad {
+  width: var(--dpad);
+  height: var(--dpad);
+  border: none;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 30% 25%,
+    #fff59d,
+    #ffeb3b 55%,
+    #d1b800 100%
+  );
+  color: rgba(0, 0, 0, 0.72);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.3),
+    0 -10px 18px rgba(255, 255, 255, 0.18) inset,
+    0 0 0 2px rgba(0, 0, 0, 0.18) inset;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  font-weight: 900;
+  position: relative;
+}
+
+.dpad[data-label]::after {
+  content: attr(data-label);
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 6px);
+  transform: translateX(-50%);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.82);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.dpad:active,
+.dpad[aria-pressed="true"] {
+  transform: translateY(1px);
+  filter: brightness(0.98);
+}
+
+.dpad.up {
+  grid-column: 2;
+  grid-row: 1;
+}
+.dpad.left {
+  grid-column: 1;
+  grid-row: 2;
+}
+.dpad.center {
+  grid-column: 2;
+  grid-row: 2;
+  background: rgba(0, 0, 0, 0.18);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2) inset;
+  color: rgba(0, 0, 0, 0.5);
+  cursor: default;
+}
+.dpad.right {
+  grid-column: 3;
+  grid-row: 2;
+}
+.dpad.down {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.retro-mid {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  transform: translateY(28px);
+  margin-top:80px
+}
+
+.retro-toggles {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+}
+
+.retro-toggle {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.retro-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 30% 25%,
+    #d9ffb3,
+    #00e676 70%,
+    #008f43 100%
+  );
+  box-shadow:
+    0 10px 18px rgba(0, 0, 0, 0.25),
+    0 0 0 2px rgba(0, 0, 0, 0.2) inset;
+}
+
+.retro-toggle-label {
+  font-size: 9px;
+  letter-spacing: 0.4px;
+  opacity: 0.85;
+}
+
+.retro-small-btn {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: none;
+  background: radial-gradient(
+    circle at 30% 25%,
+    #fff59d,
+    #ffeb3b 55%,
+    #d1b800 100%
+  );
+  color: rgba(0, 0, 0, 0.72);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.3),
+    0 -10px 18px rgba(255, 255, 255, 0.18) inset,
+    0 0 0 2px rgba(0, 0, 0, 0.18) inset;
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+}
+
+.retro-leds {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.led {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at 30% 25%,
+    #d9ffb3,
+    #00e676 70%,
+    #008f43 100%
+  );
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.18) inset;
+  opacity: 0.9;
+}
+
+.retro-action {
+  --action: clamp(64px, 16vw, 80px);
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  justify-self: center;
+  margin-right: 0;
+  align-self: flex-start;
+}
+
+.action-btn {
+  width: var(--action);
+  height: var(--action);
+  border-radius: 999px;
+  border: none;
+  background: radial-gradient(
+    circle at 30% 25%,
+    #fff59d,
+    #ffeb3b 55%,
+    #d1b800 100%
+  );
+  color: rgba(0, 0, 0, 0.55);
+  box-shadow:
+    0 12px 26px rgba(0, 0, 0, 0.35),
+    0 -12px 20px rgba(255, 255, 255, 0.2) inset,
+    0 0 0 2px rgba(0, 0, 0, 0.18) inset;
+  cursor: pointer;
+  font-weight: 900;
+  touch-action: none;
+  user-select: none;
+}
+
+.action-btn:active,
+.action-btn[aria-pressed="true"] {
+  transform: translateY(1px);
+  filter: brightness(0.98);
+}
+
+.action-label {
+  font-size: 11px;
+  letter-spacing: 0.7px;
+  opacity: 0.9;
+  color: rgba(255, 255, 255, 0.88);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.game-container {
+  width: 100%;
+  max-width: 420px;
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+}
+
+.game-stats {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stat {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 10px 12px;
+}
+
+.stat span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.stat strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 18px;
+}
+
+.game-canvas {
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18) inset;
+  background: transparent;
+}
+
+.game-controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-start,
+.btn-pause {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+}
+
+.btn-start:hover,
+.btn-pause:hover {
+  border-color: rgba(0, 245, 255, 0.35);
+}
+
+.key-hints {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 520px) {
+  .retro-controls {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    justify-items: center;
+  }
+  .retro-ab {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 380px) {
+  .retro-action {
+    --action: 72px;
+  }
+}
+
+.retro .game-stats,
+.retro .game-controls,
+.retro .key-hints {
+  display: none !important;
+}
+
+.retro .game-container {
+  max-width: none;
+  width: 100%;
+  gap: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.retro .game-canvas {
+  display: block;
+  border-radius: 8px;
+  image-rendering: pixelated;
+  filter: none;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 0;
+  align-self: center;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.retro-playfield .game-container {
+  height: 100%;
+}
+
+.retro-playfield .game-canvas {
+  border-radius: 0;
+}
+
+.retro-game-wrap {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.retro-game-wrap[data-status="idle"] .game-container {
+  visibility: hidden;
+}
+
+.retro-picker {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 12px;
+  color: rgba(0, 0, 0, 0.75);
+  text-align: center;
+  pointer-events: none;
+}
+
+.retro-picker-title {
+  font-size: 12px;
+  letter-spacing: 1.2px;
+  font-weight: 800;
+  opacity: 0.85;
+}
+
+.retro-picker-row {
+  display: grid;
+  grid-template-columns: repeat(3, 52px);
+  gap: 8px;
+  justify-content: center;
+  align-content: center;
+  pointer-events: auto;
+}
+
+.retro-picker-brick {
+  width: 52px;
+  height: 34px;
+  border-radius: 6px;
+  border: 2px solid rgba(0, 0, 0, 0.45);
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.07), rgba(0, 0, 0, 0.02)),
+    rgba(0, 0, 0, 0.06);
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  color: rgba(0, 0, 0, 0.75);
+  cursor: pointer;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.25) inset;
+}
+
+.retro-picker-brick-active {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.05)),
+    rgba(0, 0, 0, 0.12);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.5) inset,
+    0 10px 18px rgba(0, 0, 0, 0.18);
+}
+
+.retro-picker-hint {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.retro-lcd::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.045) 0px,
+      rgba(0, 0, 0, 0.045) 1px,
+      rgba(255, 255, 255, 0.02) 2px,
+      rgba(255, 255, 255, 0.02) 4px
+    ),
+    radial-gradient(
+      700px 420px at 30% 10%,
+      rgba(255, 255, 255, 0.14),
+      transparent 55%
+    ),
+    radial-gradient(
+      700px 420px at 70% 60%,
+      rgba(0, 0, 0, 0.08),
+      transparent 60%
+    );
+  mix-blend-mode: multiply;
+  opacity: 0.85;
+}
