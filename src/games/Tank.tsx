@@ -24,6 +24,7 @@ interface Enemy {
   hp: number;
   shootTimer: number;
   color: string;
+  level: number;
 }
 interface Particle {
   x: number;
@@ -58,7 +59,8 @@ const drawTank = (
 };
 
 export const Tank: React.FC = () => {
-  const { status, setStatus, updateScore, currentGame, setLives } = useGame();
+  const { status, setStatus, updateScore, currentGame, setLives, setLevel, setSpeed } =
+    useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const playerPos = useRef({ x: W / 2 - TANK_W / 2, y: H - TANK_H - 20 });
   const bullets = useRef<Bullet[]>([]);
@@ -74,18 +76,22 @@ export const Tank: React.FC = () => {
   const [displayLives, setDisplayLives] = useState(3);
   const wave = useRef(1);
 
-  const spawnWave = useCallback(() => {
-    const count = 3 + wave.current * 2;
+  const spawnWave = useCallback((level: number) => {
+    const clampedLevel = Math.max(1, Math.min(30, level));
+    const count = Math.min(18, 2 + clampedLevel); // start slower, ramp up
     for (let i = 0; i < count; i++) {
       const col = Math.floor(Math.random() * 6);
+      const baseVy = 0.6 + clampedLevel * 0.12;
+      const baseShoot = Math.max(35, 140 - clampedLevel * 6);
       enemies.current.push({
         x: col * 42 + 10,
         y: -50 - i * 60,
         vx: (Math.random() - 0.5) * 1.5,
-        vy: 0.8 + wave.current * 0.2,
-        hp: 1 + Math.floor(wave.current / 3),
-        shootTimer: Math.floor(Math.random() * 120),
+        vy: baseVy,
+        hp: 1 + Math.floor(clampedLevel / 3),
+        shootTimer: baseShoot + Math.floor(Math.random() * 80),
         color: ENEMY_COLORS[Math.floor(Math.random() * ENEMY_COLORS.length)],
+        level: clampedLevel,
       });
     }
   }, []);
@@ -144,7 +150,9 @@ export const Tank: React.FC = () => {
 
     // Enemy spawn
     if (enemies.current.length === 0) {
-      spawnWave();
+      spawnWave(wave.current);
+      setLevel(wave.current);
+      setSpeed(wave.current);
       wave.current++;
     }
 
@@ -162,7 +170,8 @@ export const Tank: React.FC = () => {
           y: e.y + ENEMY_H,
           fromPlayer: false,
         });
-        e.shootTimer = 80 + Math.floor(Math.random() * 80);
+        const baseShoot = Math.max(28, 120 - e.level * 4);
+        e.shootTimer = baseShoot + Math.floor(Math.random() * 70);
       }
 
       // Reached bottom
@@ -267,7 +276,15 @@ export const Tank: React.FC = () => {
     drawTank(ctx, p.x, p.y, LCD.ink, TANK_W, TANK_H);
 
     rafRef.current = requestAnimationFrame(loop);
-  }, [spawnWave, setLives, setStatus, updateScore, currentGame]);
+  }, [
+    spawnWave,
+    setLevel,
+    setLives,
+    setSpeed,
+    setStatus,
+    updateScore,
+    currentGame,
+  ]);
 
   const startGame = useCallback(() => {
     scoreRef.current = 0;
@@ -281,8 +298,10 @@ export const Tank: React.FC = () => {
     setDisplayScore(0);
     setDisplayLives(3);
     setLives(3);
+    setLevel(1);
+    setSpeed(1);
     setStatus("playing");
-  }, [setLives, setStatus]);
+  }, [setLives, setLevel, setSpeed, setStatus]);
 
   useEffect(() => {
     if (status === "playing") {

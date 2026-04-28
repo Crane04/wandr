@@ -34,6 +34,8 @@ export const App: React.FC = () => {
     status,
     poweredOn,
     lives,
+    level,
+    speed,
   } = useGame();
 
   const GameView = useMemo(() => {
@@ -60,6 +62,8 @@ export const App: React.FC = () => {
       highScore={highScores[currentGame]}
       poweredOn={poweredOn}
       lives={lives}
+      level={level}
+      speed={speed}
       onSelectGame={setCurrentGame}
       controls={<OnScreenControls currentGame={currentGame} />}
     >

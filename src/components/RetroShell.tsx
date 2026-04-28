@@ -15,6 +15,8 @@ export const RetroShell: React.FC<{
   highScore: number;
   poweredOn: boolean;
   lives: number | null;
+  level: number | null;
+  speed: number | null;
   onSelectGame: (g: GameName) => void;
   controls?: React.ReactNode;
   children: React.ReactNode;
@@ -24,6 +26,8 @@ export const RetroShell: React.FC<{
   highScore,
   poweredOn,
   lives,
+  level,
+  speed,
   onSelectGame,
   controls,
   children,
@@ -64,11 +68,15 @@ export const RetroShell: React.FC<{
                 ) : null}
                 <div className="retro-side-row">
                   <span className="k">LEVEL</span>
-                  <span className="v">01</span>
+                  <span className="v">
+                    {(level ?? 1).toString().padStart(2, "0")}
+                  </span>
                 </div>
                 <div className="retro-side-row">
                   <span className="k">SPEED</span>
-                  <span className="v">01</span>
+                  <span className="v">
+                    {(speed ?? 1).toString().padStart(2, "0")}
+                  </span>
                 </div>
               </aside>
               {!poweredOn ? (

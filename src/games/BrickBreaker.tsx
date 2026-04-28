@@ -29,13 +29,15 @@ const makeBricks = (): Brick[] => {
 };
 
 export const BrickBreaker: React.FC = () => {
-  const { status, setStatus, updateScore, currentGame, setLives } = useGame();
+  const { status, setStatus, updateScore, currentGame, setLives, setLevel, setSpeed } =
+    useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const paddleX = useRef(W / 2 - PADDLE_W / 2);
   const ball = useRef<Ball>({ x: W / 2, y: H / 2, vx: 3, vy: -3 });
   const bricks = useRef<Brick[]>(makeBricks());
   const scoreRef = useRef(0);
   const livesRef = useRef(3);
+  const levelRef = useRef(1);
   const rafRef = useRef<number>(0);
   const [displayScore, setDisplayScore] = useState(0);
   const [displayLives, setDisplayLives] = useState(3);
@@ -118,23 +120,34 @@ export const BrickBreaker: React.FC = () => {
       bricks.current = makeBricks();
       scoreRef.current += 100;
       setDisplayScore(scoreRef.current);
+      levelRef.current += 1;
+      setLevel(levelRef.current);
+      setSpeed(levelRef.current);
+
+      // Slightly increase ball speed each level.
+      const speedUp = 1 + Math.min(0.6, levelRef.current * 0.05);
+      b.vx = Math.sign(b.vx || 1) * Math.max(2, Math.abs(b.vx) * speedUp);
+      b.vy = -Math.max(2.5, Math.abs(b.vy) * speedUp);
     }
 
     draw();
     rafRef.current = requestAnimationFrame(loop);
-  }, [draw, setLives, setStatus, updateScore, currentGame]);
+  }, [draw, setLevel, setLives, setSpeed, setStatus, updateScore, currentGame]);
 
   const startGame = useCallback(() => {
     scoreRef.current = 0;
     livesRef.current = 3;
+    levelRef.current = 1;
     setDisplayScore(0);
     setDisplayLives(3);
     setLives(3);
+    setLevel(1);
+    setSpeed(1);
     bricks.current = makeBricks();
     ball.current = { x: W / 2, y: H / 2, vx: 3, vy: -3 };
     paddleX.current = W / 2 - PADDLE_W / 2;
     setStatus('playing');
-  }, [setLives, setStatus]);
+  }, [setLives, setLevel, setSpeed, setStatus]);
 
   useEffect(() => {
     if (status === 'playing') {

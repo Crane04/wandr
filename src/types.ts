@@ -14,6 +14,8 @@ export interface GameState {
   status: GameStatus;
   poweredOn: boolean;
   lives: number | null;
+  level: number | null;
+  speed: number | null;
   scores: GameScore;
   highScores: GameScore;
   setCurrentGame: (game: GameName) => void;
@@ -21,5 +23,7 @@ export interface GameState {
   setPoweredOn: (on: boolean) => void;
   togglePower: () => void;
   setLives: (lives: number | null) => void;
+  setLevel: (level: number | null) => void;
+  setSpeed: (speed: number | null) => void;
   updateScore: (game: GameName, score: number) => void;
 }

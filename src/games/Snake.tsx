@@ -27,7 +27,8 @@ const randFood = (snake: Point[]): Point => {
 };
 
 export const Snake: React.FC = () => {
-  const { status, setStatus, updateScore, currentGame, setLives } = useGame();
+  const { status, setStatus, updateScore, currentGame, setLives, setLevel, setSpeed } =
+    useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const startPos = useCallback(
     (): Point => ({ x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2) }),
@@ -38,8 +39,15 @@ export const Snake: React.FC = () => {
   const nextDir = useRef<Point>({ x: 1, y: 0 });
   const food = useRef<Point>({ x: 5, y: 5 });
   const scoreRef = useRef(0);
+  const levelRef = useRef(1);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [displayScore, setDisplayScore] = useState(0);
+
+  const tickMsForLevel = useCallback((level: number) => {
+    const l = Math.max(1, Math.min(30, level));
+    // Start slow, speed up each level, clamped.
+    return Math.max(70, 160 - (l - 1) * 10);
+  }, []);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -103,11 +111,32 @@ export const Snake: React.FC = () => {
       setDisplayScore(scoreRef.current);
       updateScore(currentGame, scoreRef.current);
       food.current = randFood(snake.current);
+
+      const nextLevel = 1 + Math.floor(scoreRef.current / 50);
+      if (nextLevel !== levelRef.current) {
+        levelRef.current = nextLevel;
+        setLevel(nextLevel);
+        setSpeed(nextLevel);
+        const ms = tickMsForLevel(nextLevel);
+        if (status === "playing") {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          intervalRef.current = setInterval(tick, ms);
+        }
+      }
     } else {
       snake.current.pop();
     }
     draw();
-  }, [draw, setStatus, updateScore, currentGame]);
+  }, [
+    draw,
+    setLevel,
+    setSpeed,
+    setStatus,
+    status,
+    tickMsForLevel,
+    updateScore,
+    currentGame,
+  ]);
 
   const startGame = useCallback(() => {
     snake.current = [startPos()];
@@ -115,25 +144,26 @@ export const Snake: React.FC = () => {
     nextDir.current = { x: 1, y: 0 };
     food.current = randFood(snake.current);
     scoreRef.current = 0;
+    levelRef.current = 1;
     setDisplayScore(0);
     setLives(null);
+    setLevel(1);
+    setSpeed(1);
     setStatus("playing");
-  }, [setLives, setStatus, startPos]);
+  }, [setLives, setLevel, setSpeed, setStatus, startPos]);
 
   useEffect(() => {
     if (status === "playing") {
+      const ms = tickMsForLevel(levelRef.current);
       if (intervalRef.current) clearInterval(intervalRef.current);
-      intervalRef.current = setInterval(
-        tick,
-        Math.max(80, 150 - scoreRef.current),
-      );
+      intervalRef.current = setInterval(tick, ms);
     }
     if (status === "paused" && intervalRef.current)
       clearInterval(intervalRef.current);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [status, tick]);
+  }, [status, tick, tickMsForLevel]);
 
   useEffect(() => {
     draw();

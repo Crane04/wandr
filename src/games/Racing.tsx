@@ -58,7 +58,8 @@ const drawCar = (
 };
 
 export const Racing: React.FC = () => {
-  const { status, setStatus, updateScore, currentGame, setLives } = useGame();
+  const { status, setStatus, updateScore, currentGame, setLives, setLevel, setSpeed } =
+    useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const playerLane = useRef(1);
   const enemies = useRef<Enemy[]>([]);
@@ -71,6 +72,7 @@ export const Racing: React.FC = () => {
   const lastEnemy = useRef(0);
   const [displayScore, setDisplayScore] = useState(0);
   const frameRef = useRef(0);
+  const levelRef = useRef(1);
 
   const getPlayerX = () =>
     ROAD_X + playerLane.current * LANE_W + (LANE_W - CAR_W) / 2;
@@ -131,15 +133,27 @@ export const Racing: React.FC = () => {
     // Score
     scoreRef.current++;
     if (frameRef.current % 60 === 0) {
-      setDisplayScore(Math.floor(scoreRef.current / 10));
-      updateScore(currentGame, Math.floor(scoreRef.current / 10));
+      const points = Math.floor(scoreRef.current / 10);
+      setDisplayScore(points);
+      updateScore(currentGame, points);
       speedRef.current = Math.min(10, 3 + scoreRef.current / 600);
+
+      const nextLevel = 1 + Math.floor(points / 50);
+      if (nextLevel !== levelRef.current) {
+        levelRef.current = nextLevel;
+        setLevel(nextLevel);
+      }
+      setSpeed(Math.round(speedRef.current));
     }
 
     // Spawn enemies
+    const spawnEvery = Math.max(
+      28,
+      90 - scoreRef.current / 100 - (levelRef.current - 1) * 4,
+    );
     if (
       frameRef.current - lastEnemy.current >
-      Math.max(40, 90 - scoreRef.current / 100)
+      spawnEvery
     ) {
       spawnEnemy();
       lastEnemy.current = frameRef.current;
@@ -192,12 +206,13 @@ export const Racing: React.FC = () => {
     drawCar(ctx, px, PLAYER_Y, PLAYER_COLOR, CAR_W, CAR_H, true);
 
     rafRef.current = requestAnimationFrame(loop);
-  }, [spawnEnemy, setStatus, updateScore, currentGame]);
+  }, [spawnEnemy, setLevel, setSpeed, setStatus, updateScore, currentGame]);
 
   const startGame = useCallback(() => {
     scoreRef.current = 0;
     speedRef.current = 3;
     frameRef.current = 0;
+    levelRef.current = 1;
     lastEnemy.current = 0;
     enemies.current = [];
     particles.current = [];
@@ -205,8 +220,10 @@ export const Racing: React.FC = () => {
     roadOffset.current = 0;
     setDisplayScore(0);
     setLives(null);
+    setLevel(1);
+    setSpeed(1);
     setStatus("playing");
-  }, [setLives, setStatus]);
+  }, [setLives, setLevel, setSpeed, setStatus]);
 
   useEffect(() => {
     if (status === "playing") {

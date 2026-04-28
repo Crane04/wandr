@@ -4,10 +4,9 @@ import { LCD } from "./palette";
 
 const COLS = 10;
 const ROWS = 20;
-// Use a slightly narrower cell width so the playfield can fill the available
-// height on mobile even with the right-side LCD panel present.
-const CELL_W = 24;
-const CELL_H = 28;
+const CELL_DESKTOP = 28;
+const CELL_W_MOBILE = 24;
+const CELL_H_MOBILE = 28;
 
 const TETROMINOES = [
   { shape: [[1, 1, 1, 1]], color: LCD.ink },
@@ -65,8 +64,10 @@ const rotate = (matrix: number[][]): number[][] => {
 };
 
 export const Tetris: React.FC = () => {
-  const { status, setStatus, updateScore, currentGame, setLives } = useGame();
+  const { status, setStatus, updateScore, currentGame, setLives, setLevel, setSpeed } =
+    useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cellRef = useRef({ w: CELL_DESKTOP, h: CELL_DESKTOP });
   const boardRef = useRef<Board>(emptyBoard());
   const pieceRef = useRef<{
     shape: number[][];
@@ -79,6 +80,13 @@ export const Tetris: React.FC = () => {
   const [displayScore, setDisplayScore] = useState(0);
   const [displayLines, setDisplayLines] = useState(0);
   const linesRef = useRef(0);
+  const levelRef = useRef(1);
+
+  const dropMsForLevel = useCallback((level: number) => {
+    const l = Math.max(1, Math.min(20, level));
+    // Exponential-ish speed up per level, clamped.
+    return Math.max(80, Math.floor(520 * Math.pow(0.86, l - 1)));
+  }, []);
 
   const randomPiece = useCallback(() => {
     const t = TETROMINOES[Math.floor(Math.random() * TETROMINOES.length)];
@@ -90,6 +98,19 @@ export const Tetris: React.FC = () => {
     };
   }, []);
 
+  const syncCanvasSize = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const isMobile = window.matchMedia("(max-width: 520px)").matches;
+    cellRef.current = isMobile
+      ? { w: CELL_W_MOBILE, h: CELL_H_MOBILE }
+      : { w: CELL_DESKTOP, h: CELL_DESKTOP };
+
+    canvas.width = COLS * cellRef.current.w;
+    canvas.height = ROWS * cellRef.current.h;
+  }, []);
+
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -99,12 +120,13 @@ export const Tetris: React.FC = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const drawBlock = (col: number, row: number, color: string) => {
-      const x = col * CELL_W;
-      const y = row * CELL_H;
-      const unit = Math.min(CELL_W, CELL_H);
+      const { w: cellW, h: cellH } = cellRef.current;
+      const x = col * cellW;
+      const y = row * cellH;
+      const unit = Math.min(cellW, cellH);
       const pad = Math.max(1, Math.floor(unit * 0.08));
-      const w = CELL_W - pad * 2;
-      const h = CELL_H - pad * 2;
+      const w = cellW - pad * 2;
+      const h = cellH - pad * 2;
 
       ctx.save();
       ctx.fillStyle = color;
@@ -184,7 +206,12 @@ export const Tetris: React.FC = () => {
       setDisplayLines(linesRef.current);
       updateScore(currentGame, scoreRef.current);
     }
-  }, [updateScore, currentGame]);
+
+    const nextLevel = 1 + Math.floor(linesRef.current / 10);
+    levelRef.current = nextLevel;
+    setLevel(nextLevel);
+    setSpeed(nextLevel);
+  }, [updateScore, currentGame, setLevel, setSpeed]);
 
   const dropPiece = useCallback(() => {
     const p = pieceRef.current;
@@ -209,22 +236,34 @@ export const Tetris: React.FC = () => {
     boardRef.current = emptyBoard();
     scoreRef.current = 0;
     linesRef.current = 0;
+    levelRef.current = 1;
     setDisplayScore(0);
     setDisplayLines(0);
     setLives(null);
+    setLevel(1);
+    setSpeed(1);
     pieceRef.current = randomPiece();
     setStatus("playing");
     if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(dropPiece, 500);
+    intervalRef.current = setInterval(dropPiece, dropMsForLevel(1));
     draw();
-  }, [randomPiece, setLives, setStatus, dropPiece, draw]);
+  }, [
+    randomPiece,
+    setLives,
+    setLevel,
+    setSpeed,
+    setStatus,
+    dropPiece,
+    draw,
+    dropMsForLevel,
+  ]);
 
   useEffect(() => {
     if (status === "playing") {
       if (intervalRef.current) clearInterval(intervalRef.current);
       intervalRef.current = setInterval(
         dropPiece,
-        Math.max(100, 500 - linesRef.current * 5),
+        dropMsForLevel(levelRef.current),
       );
     }
     if (status === "paused" && intervalRef.current)
@@ -232,11 +271,21 @@ export const Tetris: React.FC = () => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [status, dropPiece]);
+  }, [status, dropPiece, dropMsForLevel]);
 
   useEffect(() => {
+    syncCanvasSize();
     draw();
   }, [status, draw]);
+
+  useEffect(() => {
+    const onResize = () => {
+      syncCanvasSize();
+      draw();
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [draw, syncCanvasSize]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -284,8 +333,6 @@ export const Tetris: React.FC = () => {
       </div>
       <canvas
         ref={canvasRef}
-        width={COLS * CELL_W}
-        height={ROWS * CELL_H}
         className="game-canvas"
       />
       <div className="game-controls">
