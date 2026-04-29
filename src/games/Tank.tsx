@@ -136,6 +136,36 @@ const drawBoss = (
   ctx.restore();
 };
 
+const drawMultiGunEnemy = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  guns: 2 | 3,
+) => {
+  // Transparent body with black border (boss-like), with multiple gun barrels.
+  ctx.save();
+  // Rotate 180deg so the barrels point downward on screen.
+  ctx.translate(x + w / 2, y + h / 2);
+  ctx.rotate(Math.PI);
+  ctx.translate(-w / 2, -h / 2);
+
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#000";
+  ctx.strokeRect(0, 0, w, h);
+  ctx.globalAlpha = 0.6;
+  ctx.strokeRect(2, 2, w - 4, h - 4);
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = "#000";
+  const barrelXs = guns === 3 ? [0.2, 0.5, 0.8] : [0.32, 0.68];
+  for (const fx of barrelXs) {
+    ctx.fillRect(w * fx - 3, -9, 6, 11);
+  }
+  ctx.restore();
+};
+
 const drawAlly = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -185,6 +215,10 @@ export const Tank: React.FC = () => {
   const gunHeadsRef = useRef(1); // 1-4, number of heads shooting
   const bonusBombFramesRef = useRef(0); // when >0, bomb blast is active on shoot
   const comboShotUntilMsRef = useRef(0); // when > now, 8-direction shot is active
+  const allyMultishotCountRef = useRef(0);
+  const allyGunHeadsRef = useRef(1);
+  const allyComboShotUntilMsRef = useRef(0);
+  const allyShieldHpRef = useRef(0);
   const rafRef = useRef<number>(0);
   const keysRef = useRef<Record<string, boolean>>({});
   const frameRef = useRef(0);
@@ -210,6 +244,7 @@ export const Tank: React.FC = () => {
   const BONUS_BOMB_RADIUS = 96;
   const BONUS_BOMB_BOSS_DAMAGE = 7;
   const COMBO_SHOT_DURATION_MS = 5_000;
+  const ALLY_COMBO_SHOT_DURATION_MS = 3_250;
   const BOSS_MIN_Y = 8;
   const BOSS_MAX_Y = Math.floor(H * 0.42);
 
@@ -229,13 +264,16 @@ export const Tank: React.FC = () => {
       const guns: 1 | 2 | 3 = gunRoll < 0.08 ? 3 : gunRoll < 0.28 ? 2 : 1;
       // Rare: some enemies get a small "combo" shot (3-way spread).
       const combo = Math.random() < 0.05;
+      const baseHp = 1 + Math.floor(clampedLevel / 3);
+      const gunHpBonus = guns === 3 ? 2 : guns === 2 ? 1 : 0;
+      const hp = baseHp + gunHpBonus;
       enemies.current.push({
         x: col * 42 + 10,
         y: -50 - i * 60,
         vx: (Math.random() - 0.5) * 1.5,
         vy: baseVy,
-        hp: 1 + Math.floor(clampedLevel / 3),
-        maxHp: 1 + Math.floor(clampedLevel / 3),
+        hp,
+        maxHp: hp,
         hitCooldown: 0,
         shootTimer: baseShoot + Math.floor(Math.random() * 60),
         color: ENEMY_COLORS[Math.floor(Math.random() * ENEMY_COLORS.length)],
@@ -371,6 +409,7 @@ export const Tank: React.FC = () => {
 
     if (bonusBombFramesRef.current > 0) bonusBombFramesRef.current--;
     const comboActive = performance.now() < comboShotUntilMsRef.current;
+    const allyComboActive = performance.now() < allyComboShotUntilMsRef.current;
 
     // Ally AI movement (free will): chases enemies with some randomness.
     if (allyActive && allyAliveRef.current) {
@@ -383,24 +422,46 @@ export const Tank: React.FC = () => {
       allyVelRef.current.vx *= 0.92;
       allyVelRef.current.vy *= 0.88;
 
-      // Pick a target: closest enemy (prefer ones that are on-screen).
-      let target: Enemy | null = null;
-      let bestScore = Number.POSITIVE_INFINITY;
+      const ax = a.x + TANK_W / 2;
+      const ay = a.y + TANK_H / 2;
+
+      // Pick a target: enemies and bonuses are both priorities.
+      // - Enemies: prioritize ones nearer the ally's "safe band" horizontally.
+      // - Bonuses: prioritize ones that are reachable soon (not too far above).
+      let enemyTarget: Enemy | null = null;
+      let bestEnemyScore = Number.POSITIVE_INFINITY;
       for (const e of enemies.current) {
         const { w: ew, h: eh } = enemySize(e);
         const ex = e.x + ew / 2;
         const ey = e.y + eh / 2;
         if (ey < -80 || ey > H + 80) continue;
-        const ax = a.x + TANK_W / 2;
-        const ay = a.y + TANK_H / 2;
         const dx = ex - ax;
-        const dy = ey - ay;
-        const score = dx * dx + dy * dy;
-        if (score < bestScore) {
-          bestScore = score;
-          target = e;
+        const dyToBand = Math.max(0, ALLY_MIN_Y - ey);
+        const score = dx * dx + dyToBand * dyToBand * 6;
+        if (score < bestEnemyScore) {
+          bestEnemyScore = score;
+          enemyTarget = e;
         }
       }
+
+      let bonusTarget: Bonus | null = null;
+      let bestBonusScore = Number.POSITIVE_INFINITY;
+      for (const b of bonuses.current) {
+        const bx = b.x + BONUS_W / 2;
+        const by = b.y + BONUS_H / 2;
+        if (by < ALLY_MIN_Y - 120) continue;
+        const dx = bx - ax;
+        const dy = by - ay;
+        // Slight bias toward collecting bonuses when distances are similar.
+        const score = (dx * dx + dy * dy) * 0.9;
+        if (score < bestBonusScore) {
+          bestBonusScore = score;
+          bonusTarget = b;
+        }
+      }
+
+      const targetKind =
+        bonusTarget && bestBonusScore <= bestEnemyScore ? "bonus" : "enemy";
 
       // Every so often, add a small random "wiggle" so it feels alive.
       if (frameRef.current % 45 === 0) {
@@ -409,9 +470,21 @@ export const Tank: React.FC = () => {
         allyVelRef.current.vy += (Math.random() - 0.5) * 0.12;
       }
 
-      if (target) {
-        const { w: tw, h: th } = enemySize(target);
-        const tx = target.x + tw / 2 - TANK_W / 2;
+      if (targetKind === "bonus" && bonusTarget) {
+        const tx = bonusTarget.x + BONUS_W / 2 - TANK_W / 2;
+        // For bonuses, allow following the falling y (within the safe band).
+        const ty = Math.max(
+          ALLY_MIN_Y,
+          Math.min(ALLY_MAX_Y, bonusTarget.y + BONUS_H / 2 - TANK_H / 2),
+        );
+
+        const toX = tx - a.x;
+        const toY = ty - a.y;
+        allyVelRef.current.vx += Math.sign(toX) * 0.22;
+        allyVelRef.current.vy += Math.sign(toY) * 0.28;
+      } else if (enemyTarget) {
+        const { w: tw, h: th } = enemySize(enemyTarget);
+        const tx = enemyTarget.x + tw / 2 - TANK_W / 2;
         // Don't chase vertically toward enemies; stay near the player in a safe band.
         const preferredY = p.y - 70;
         const ty = Math.max(ALLY_MIN_Y, Math.min(ALLY_MAX_Y - 40, preferredY));
@@ -575,15 +648,15 @@ export const Tank: React.FC = () => {
       if (allyShootCooldown.current > 0) allyShootCooldown.current--;
       if (allyShootCooldown.current === 0 && enemies.current.length > 0) {
         const a = allyPos.current;
-        // Mirror the player's current firepower (gun heads + multishot).
-        for (let head = 0; head < gunHeadsRef.current; head++) {
-          const offsetX = (head - (gunHeadsRef.current - 1) / 2) * 10;
+        // Ally has its own bonus state (doesn't mirror the player).
+        for (let head = 0; head < allyGunHeadsRef.current; head++) {
+          const offsetX = (head - (allyGunHeadsRef.current - 1) / 2) * 10;
           const bulletX = a.x + TANK_W / 2 - BULLET_W / 2 + offsetX;
-          if (comboActive) {
+          if (allyComboActive) {
             const speed = 8;
             const base = -Math.PI / 2;
             const offsets = [-0.66, -0.46, -0.28, -0.12, 0, 0.12, 0.28, 0.46];
-            const multiFactor = multishotCountRef.current > 0 ? 2 : 1;
+            const multiFactor = allyMultishotCountRef.current > 0 ? 2 : 1;
             const micro = 0.06;
             for (const off of offsets) {
               for (let i = 0; i < multiFactor; i++) {
@@ -599,7 +672,7 @@ export const Tank: React.FC = () => {
               }
             }
           } else {
-            for (let shot = 0; shot < 1 + multishotCountRef.current; shot++) {
+            for (let shot = 0; shot < 1 + allyMultishotCountRef.current; shot++) {
               bullets.current.push({
                 x: bulletX,
                 y: a.y - BULLET_H,
@@ -828,7 +901,11 @@ export const Tank: React.FC = () => {
         ctx.fillText(label, barX + barW / 2, barY + barH / 2 + 0.5);
         ctx.restore();
       } else {
-        drawTank(ctx, e.x, e.y, e.color, ew, eh, Math.PI);
+        if (e.guns > 1) {
+          drawMultiGunEnemy(ctx, e.x, e.y, ew, eh, e.guns as 2 | 3);
+        } else {
+          drawTank(ctx, e.x, e.y, e.color, ew, eh, Math.PI);
+        }
       }
       return true;
     });
@@ -980,13 +1057,11 @@ export const Tank: React.FC = () => {
             b.y + BULLET_H > a.y &&
             b.y < a.y + TANK_H
           ) {
-            // Player shield also protects the ally (shared shield pool).
-            if (shieldHpRef.current > 0) {
-              shieldHpRef.current--;
-              setDisplayShield(shieldHpRef.current);
+            // Ally shield (separate from player shield).
+            if (allyShieldHpRef.current > 0) {
+              allyShieldHpRef.current--;
               smash(b.x + BULLET_W / 2, b.y + BULLET_H / 2, LCD.ink);
               explode(b.x + BULLET_W / 2, b.y + BULLET_H / 2, LCD.ink2);
-              if (shieldHpRef.current === 0) setDisplayShield(0);
               return false;
             }
 
@@ -1202,7 +1277,7 @@ export const Tank: React.FC = () => {
         return false; // Remove bonus
       }
 
-      // Ally can also pick up bonuses (shared power-ups).
+      // Ally can also pick up bonuses (its own power-ups, separate from player).
       const allyActive = levelRef.current >= ALLY_START_LEVEL;
       if (allyActive && allyAliveRef.current) {
         const a = allyPos.current;
@@ -1213,31 +1288,46 @@ export const Tank: React.FC = () => {
           bonus.y < a.y + TANK_H
         ) {
           if (bonus.type === "multishot") {
-            multishotCountRef.current = Math.min(
-              3,
-              multishotCountRef.current + 1,
+            allyMultishotCountRef.current = Math.min(
+              2,
+              allyMultishotCountRef.current + 1,
             );
-          } else if (bonus.type === "gunheads") {
-            gunHeadsRef.current = Math.min(5, gunHeadsRef.current + 1);
-          } else if (bonus.type === "shield") {
-            shieldHpRef.current = 3;
-            setDisplayShield(3);
-          } else if (bonus.type === "bomb") {
-            bonusBombFramesRef.current = BONUS_BOMB_DURATION_FRAMES;
-          } else if (bonus.type === "comboshot") {
-            comboShotUntilMsRef.current =
-              performance.now() + COMBO_SHOT_DURATION_MS;
-          } else if (bonus.type === "refill") {
+            explode(bonus.x + BONUS_W / 2, bonus.y + BONUS_H / 2, LCD.ink);
+            return false;
+          }
+          if (bonus.type === "gunheads") {
+            allyGunHeadsRef.current = Math.min(4, allyGunHeadsRef.current + 1);
+            explode(bonus.x + BONUS_W / 2, bonus.y + BONUS_H / 2, LCD.ink);
+            return false;
+          }
+          if (bonus.type === "shield") {
+            allyShieldHpRef.current = 3;
+            explode(bonus.x + BONUS_W / 2, bonus.y + BONUS_H / 2, LCD.ink);
+            return false;
+          }
+          if (bonus.type === "comboshot") {
+            allyComboShotUntilMsRef.current =
+              performance.now() + ALLY_COMBO_SHOT_DURATION_MS;
+            explode(bonus.x + BONUS_W / 2, bonus.y + BONUS_H / 2, LCD.ink);
+            return false;
+          }
+          if (bonus.type === "refill") {
+            // Refill lives is a global/resource bonus (shared).
             livesRef.current = clampLives(livesRef.current + 5);
             setDisplayLives(livesRef.current);
             setLives(livesRef.current);
-          } else {
+            explode(bonus.x + BONUS_W / 2, bonus.y + BONUS_H / 2, LCD.ink);
+            return false;
+          }
+          if (bonus.type === "lives") {
+            // Lives are shared (global).
             livesRef.current = clampLives(livesRef.current + 1);
             setDisplayLives(livesRef.current);
             setLives(livesRef.current);
+            explode(bonus.x + BONUS_W / 2, bonus.y + BONUS_H / 2, LCD.ink);
+            return false;
           }
-          explode(bonus.x + BONUS_W / 2, bonus.y + BONUS_H / 2, LCD.ink);
-          return false;
+          // Leave bomb for the player.
         }
       }
 
@@ -1306,13 +1396,11 @@ export const Tank: React.FC = () => {
           bomb.y - 8 < a.y + TANK_H
         ) {
           playerHitThisFrame = true;
-          // Shared shield protects ally as well.
-          if (shieldHpRef.current > 0) {
-            shieldHpRef.current--;
-            setDisplayShield(shieldHpRef.current);
+          // Ally shield (separate from player shield).
+          if (allyShieldHpRef.current > 0) {
+            allyShieldHpRef.current--;
             smash(bomb.x, bomb.y, LCD.ink);
             explode(bomb.x, bomb.y, LCD.ink2);
-            if (shieldHpRef.current === 0) setDisplayShield(0);
             return false;
           }
 
@@ -1342,7 +1430,7 @@ export const Tank: React.FC = () => {
     if (allyActive && allyAliveRef.current) {
       const a = allyPos.current;
       drawAlly(ctx, a.x, a.y, TANK_W, TANK_H);
-      if (shieldHpRef.current > 0) {
+      if (allyShieldHpRef.current > 0) {
         ctx.save();
         ctx.strokeStyle = "#000";
         ctx.lineWidth = 2;
@@ -1385,6 +1473,10 @@ export const Tank: React.FC = () => {
     gunHeadsRef.current = 1;
     bonusBombFramesRef.current = 0;
     comboShotUntilMsRef.current = 0;
+    allyMultishotCountRef.current = 0;
+    allyGunHeadsRef.current = 1;
+    allyComboShotUntilMsRef.current = 0;
+    allyShieldHpRef.current = 0;
     playerPos.current = { x: W / 2 - TANK_W / 2, y: H - TANK_H - 20 };
     allyPos.current = { x: W / 2 - TANK_W / 2, y: H - TANK_H - 70 };
     allyAliveRef.current = false;
