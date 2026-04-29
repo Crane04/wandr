@@ -58,15 +58,7 @@ const clickGameStartPause = () => {
 };
 
 const useVirtualControls = (currentGame: GameName) => {
-  const {
-    poweredOn,
-    togglePower,
-    soundEnabled,
-    musicEnabled,
-    toggleSound,
-    toggleMusic,
-    playSfx,
-  } = useGame();
+  const { poweredOn, togglePower } = useGame();
 
   const [pressed, setPressed] = useState<Set<ControlKey>>(() => new Set());
   const repeatTimers = useRef<Map<ControlKey, number>>(new Map());
@@ -80,8 +72,6 @@ const useVirtualControls = (currentGame: GameName) => {
   const press = useCallback(
     (key: ControlKey) => {
       if (!poweredOn) return;
-      if (key !== " ") playSfx("move");
-
       setPressed((prev) => new Set(prev).add(key));
       dispatchKey(key, "keydown");
       stopRepeating(key);
@@ -95,7 +85,7 @@ const useVirtualControls = (currentGame: GameName) => {
         repeatTimers.current.set(key, interval);
       }
     },
-    [playSfx, poweredOn, stopRepeating],
+    [poweredOn, stopRepeating],
   );
 
   const release = useCallback(
@@ -162,11 +152,6 @@ const useVirtualControls = (currentGame: GameName) => {
   return {
     poweredOn,
     togglePower,
-    soundEnabled,
-    musicEnabled,
-    toggleSound,
-    toggleMusic,
-    playSfx,
     bind,
     action,
   };
@@ -178,11 +163,6 @@ export const OnScreenControlsPortrait: React.FC<{ currentGame: GameName }> = ({
   const {
     poweredOn,
     togglePower,
-    soundEnabled,
-    musicEnabled,
-    toggleSound,
-    toggleMusic,
-    playSfx,
     bind,
     action,
   } = useVirtualControls(currentGame);
@@ -221,7 +201,6 @@ export const OnScreenControlsPortrait: React.FC<{ currentGame: GameName }> = ({
             className="retro-toggle retro-toggle-btn"
             type="button"
             onClick={() => {
-              if (!poweredOn) playSfx("power-on");
               togglePower();
             }}
             aria-pressed={poweredOn}
@@ -233,31 +212,14 @@ export const OnScreenControlsPortrait: React.FC<{ currentGame: GameName }> = ({
             <span className="retro-toggle-label">ON/OFF</span>
           </button>
 
-          <button
-            className="retro-toggle retro-toggle-btn"
-            type="button"
-            onClick={() => toggleSound()}
-            aria-pressed={soundEnabled}
-          >
-            <span
-              className={soundEnabled ? "retro-dot" : "retro-dot retro-dot-off"}
-              aria-hidden="true"
-            />
+          <div className="retro-toggle" aria-hidden="true">
+            <span className="retro-dot" aria-hidden="true" />
             <span className="retro-toggle-label">SOUND</span>
-          </button>
-
-          <button
-            className="retro-toggle retro-toggle-btn"
-            type="button"
-            onClick={() => toggleMusic()}
-            aria-pressed={musicEnabled}
-          >
-            <span
-              className={musicEnabled ? "retro-dot" : "retro-dot retro-dot-off"}
-              aria-hidden="true"
-            />
+          </div>
+          <div className="retro-toggle" aria-hidden="true">
+            <span className="retro-dot" aria-hidden="true" />
             <span className="retro-toggle-label">MUSIC</span>
-          </button>
+          </div>
         </div>
       </div>
 

@@ -196,7 +196,6 @@ export const Tank: React.FC = () => {
     setLives,
     setLevel,
     setSpeed,
-    playSfx,
   } = useGame();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const playerPos = useRef({ x: W / 2 - TANK_W / 2, y: H - TANK_H - 20 });
@@ -559,7 +558,6 @@ export const Tank: React.FC = () => {
     // Shoot
     if (shootCooldown.current > 0) shootCooldown.current--;
     if (keysRef.current[" "] && shootCooldown.current === 0) {
-      playSfx("shot");
       // Fire bullets from each gun head
       for (let head = 0; head < gunHeadsRef.current; head++) {
         const offsetX = (head - (gunHeadsRef.current - 1) / 2) * 10;
@@ -1246,7 +1244,6 @@ export const Tank: React.FC = () => {
         bonus.y + BONUS_H > p.y &&
         bonus.y < p.y + TANK_H
       ) {
-        playSfx("shot");
         if (bonus.type === "multishot") {
           // Increase multishot count (max 3)
           multishotCountRef.current = Math.min(

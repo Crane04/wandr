@@ -4,7 +4,6 @@ import React, {
   useState,
   useCallback,
   useEffect,
-  useRef,
 } from "react";
 import { GameName, GameStatus, GameScore, GameState } from "../types";
 
@@ -30,26 +29,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [poweredOn, setPoweredOn] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(() => {
-    try {
-      const raw = localStorage.getItem("wandr_sound");
-      if (raw === "0") return false;
-      if (raw === "1") return true;
-      return true;
-    } catch {
-      return true;
-    }
-  });
-  const [musicEnabled, setMusicEnabled] = useState(() => {
-    try {
-      const raw = localStorage.getItem("wandr_music");
-      if (raw === "0") return false;
-      if (raw === "1") return true;
-      return true;
-    } catch {
-      return true;
-    }
-  });
   const [lives, setLives] = useState<number | null>(null);
   const [level, setLevel] = useState<number | null>(null);
   const [speed, setSpeed] = useState<number | null>(null);
@@ -95,64 +74,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     setLives(null);
     setLevel(null);
     setSpeed(null);
-  }, []);
-
-  const audioCache = useRef<Map<string, HTMLAudioElement>>(new Map());
-
-  const playSfx = useCallback(
-    (
-      name:
-        | "game-over"
-        | "game-start"
-        | "move"
-        | "power-on"
-        | "select"
-        | "shot",
-    ) => {
-      if (!soundEnabled) return;
-      if (typeof window === "undefined") return;
-      if (document.visibilityState === "hidden") return;
-      const src = `/sounds/${name}.mp3`;
-      const base = (() => {
-        const cached = audioCache.current.get(src);
-        if (cached) return cached;
-        const a = new Audio(src);
-        a.preload = "auto";
-        audioCache.current.set(src, a);
-        return a;
-      })();
-
-      const inst = base.cloneNode(true) as HTMLAudioElement;
-      inst.volume = 0.6;
-      void inst.play().catch(() => {
-        // ignore autoplay blocks / interruptions
-      });
-    },
-    [soundEnabled],
-  );
-
-  const toggleSound = useCallback(() => {
-    setSoundEnabled((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem("wandr_sound", next ? "1" : "0");
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-  }, []);
-
-  const toggleMusic = useCallback(() => {
-    setMusicEnabled((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem("wandr_music", next ? "1" : "0");
-      } catch {
-        // ignore
-      }
-      return next;
-    });
   }, []);
 
   useEffect(() => {
@@ -202,13 +123,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const next = GAME_ORDER[nextIdx];
       handleSetCurrentGame(next);
-      playSfx("select");
       e.preventDefault();
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [currentGame, handleSetCurrentGame, playSfx, poweredOn, status]);
+  }, [currentGame, handleSetCurrentGame, poweredOn, status]);
 
   const updateScore = useCallback((game: GameName, score: number) => {
     setScores((prev) => ({ ...prev, [game]: score }));
@@ -235,8 +155,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
         currentGame,
         status,
         poweredOn,
-        soundEnabled,
-        musicEnabled,
         lives,
         level,
         speed,
@@ -246,9 +164,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
         setStatus,
         setPoweredOn,
         togglePower,
-        toggleSound,
-        toggleMusic,
-        playSfx,
         setLives,
         setLevel,
         setSpeed,

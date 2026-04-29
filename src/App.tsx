@@ -36,11 +36,6 @@ export const App: React.FC = () => {
     lives,
     level,
     speed,
-    soundEnabled,
-    musicEnabled,
-    toggleSound,
-    toggleMusic,
-    playSfx,
   } = useGame();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -48,10 +43,8 @@ export const App: React.FC = () => {
   const [prevStatus, setPrevStatus] = useState<GameStatus>(status);
   useEffect(() => {
     if (status === prevStatus) return;
-    if (status === "gameover") playSfx("game-over");
-    if (status === "playing" && prevStatus === "idle") playSfx("game-start");
     setPrevStatus(status);
-  }, [playSfx, prevStatus, status]);
+  }, [prevStatus, status]);
 
   const GameView = useMemo(() => {
     switch (currentGame) {
@@ -81,7 +74,6 @@ export const App: React.FC = () => {
       speed={speed}
       onSelectGame={(g) => {
         setCurrentGame(g);
-        playSfx("select");
       }}
       topControls={
         <button
@@ -102,32 +94,8 @@ export const App: React.FC = () => {
             aria-label="Settings"
           >
             <div className="retro-settings-row">
-              <div className="retro-settings-title">SOUND</div>
+              <div className="retro-settings-title">SETTINGS</div>
               <div className="retro-settings-actions">
-                <button
-                  type="button"
-                  className={
-                    soundEnabled
-                      ? "retro-settings-pill retro-settings-pill-active"
-                      : "retro-settings-pill"
-                  }
-                  onClick={() => toggleSound()}
-                  aria-pressed={soundEnabled}
-                >
-                  SFX {soundEnabled ? "ON" : "OFF"}
-                </button>
-                <button
-                  type="button"
-                  className={
-                    musicEnabled
-                      ? "retro-settings-pill retro-settings-pill-active"
-                      : "retro-settings-pill"
-                  }
-                  onClick={() => toggleMusic()}
-                  aria-pressed={musicEnabled}
-                >
-                  MUSIC {musicEnabled ? "ON" : "OFF"}
-                </button>
                 <button
                   type="button"
                   className="retro-settings-pill"
@@ -158,7 +126,6 @@ export const App: React.FC = () => {
                   }
                   onClick={() => {
                     setCurrentGame(g);
-                    playSfx("select");
                   }}
                 >
                   {GAME_LABEL[g]}
