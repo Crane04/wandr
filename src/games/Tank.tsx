@@ -19,6 +19,8 @@ interface Bullet {
   x: number;
   y: number;
   owner: "player" | "ally" | "enemy";
+  vx?: number;
+  vy?: number;
 }
 interface Enemy {
   x: number;
@@ -33,6 +35,7 @@ interface Enemy {
   level: number;
   kind: "enemy" | "boss";
   guns: 1 | 2 | 3;
+  combo: boolean;
 }
 interface Particle {
   x: number;
@@ -53,7 +56,14 @@ interface Impact {
 interface Bonus {
   x: number;
   y: number;
-  type: "multishot" | "gunheads" | "lives" | "shield";
+  type:
+    | "multishot"
+    | "comboshot"
+    | "gunheads"
+    | "lives"
+    | "refill"
+    | "shield"
+    | "bomb";
 }
 interface Bomb {
   x: number;
@@ -170,6 +180,8 @@ export const Tank: React.FC = () => {
   const shieldHpRef = useRef(0); // when >0, absorbs enemy bullets (3 hits total)
   const multishotCountRef = useRef(0); // 0-3, determines bullet count: 1 + count
   const gunHeadsRef = useRef(1); // 1-4, number of heads shooting
+  const bonusBombFramesRef = useRef(0); // when >0, bomb blast is active on shoot
+  const comboShotUntilMsRef = useRef(0); // when > now, 8-direction shot is active
   const rafRef = useRef<number>(0);
   const keysRef = useRef<Record<string, boolean>>({});
   const frameRef = useRef(0);
@@ -189,8 +201,14 @@ export const Tank: React.FC = () => {
   const WAVE_COOLDOWN_FRAMES = 60;
   // Increase later by changing this constant.
   const BOSSES_PER_LEVEL = 1;
-  const BOSS_HIT_COOLDOWN_FRAMES = 4;
+  const BOSS_HIT_COOLDOWN_FRAMES = 2;
   const ALLY_START_LEVEL = 5;
+  const BONUS_BOMB_DURATION_FRAMES = 7 * 60;
+  const BONUS_BOMB_RADIUS = 96;
+  const BONUS_BOMB_BOSS_DAMAGE = 7;
+  const COMBO_SHOT_DURATION_MS = 5_000;
+  const BOSS_MIN_Y = 8;
+  const BOSS_MAX_Y = Math.floor(H * 0.42);
 
   const spawnWave = useCallback((level: number) => {
     const clampedLevel = Math.max(1, Math.min(30, level));
@@ -206,6 +224,8 @@ export const Tank: React.FC = () => {
       // Some enemies spawn with 2 or 3 guns (rarer) for variety.
       const gunRoll = Math.random();
       const guns: 1 | 2 | 3 = gunRoll < 0.08 ? 3 : gunRoll < 0.28 ? 2 : 1;
+      // Rare: some enemies get a small "combo" shot (3-way spread).
+      const combo = Math.random() < 0.05;
       enemies.current.push({
         x: col * 42 + 10,
         y: -50 - i * 60,
@@ -219,6 +239,7 @@ export const Tank: React.FC = () => {
         level: clampedLevel,
         kind: "enemy",
         guns,
+        combo,
       });
     }
   }, []);
@@ -226,15 +247,15 @@ export const Tank: React.FC = () => {
   const spawnBoss = useCallback((level: number) => {
     const clampedLevel = Math.max(1, Math.min(30, level));
     // Keep boss tied to enemy speed curve, but a bit slower vertically.
-    const baseVy = 0.7 + clampedLevel * 0.13;
+    const baseVy = 0.6 + clampedLevel * 0.1;
     // Slower vertical descent than regular enemies, but faster zig-zag (horizontal) movement.
-    const bossVy = baseVy * 0.8;
-    const baseShoot = Math.max(18, 95 - clampedLevel * 4);
-    const bossHp = 10 + clampedLevel * 2;
+    const bossVy = baseVy * 0.65;
+    const baseShoot = Math.max(22, 105 - clampedLevel * 3);
+    const bossHp = Math.min(45, 8 + Math.floor(clampedLevel * 1.4));
     enemies.current.push({
       x: W / 2 - BOSS_W / 2,
       y: -BOSS_H - 10,
-      vx: (Math.random() - 0.5) * 1.5 * 1.2,
+      vx: (Math.random() - 0.5) * 1.5 * 0.9,
       vy: bossVy,
       hp: bossHp,
       maxHp: bossHp,
@@ -244,6 +265,7 @@ export const Tank: React.FC = () => {
       level: clampedLevel,
       kind: "boss",
       guns: 2,
+      combo: false,
     });
   }, []);
 
@@ -277,10 +299,24 @@ export const Tank: React.FC = () => {
     if (!force && Math.random() > 0.3) return;
 
     // Bonus selection (shield is rarer, and only if not already active).
+    // Bonus bomb is extremely rare.
+    if (Math.random() < 0.02) {
+      bonuses.current.push({
+        x: x - BONUS_W / 2,
+        y,
+        type: "bomb",
+      });
+      return;
+    }
+
     const rand = Math.random();
     let type: Bonus["type"];
     if (shieldHpRef.current === 0 && rand < 0.12) {
       type = "shield";
+    } else if (rand < 0.16) {
+      type = "comboshot";
+    } else if (rand < 0.18) {
+      type = "refill";
     } else if (rand < 0.46) {
       type = "multishot";
     } else if (rand < 0.78) {
@@ -329,6 +365,9 @@ export const Tank: React.FC = () => {
     if (keysRef.current["ArrowRight"]) p.x = Math.min(W - TANK_W, p.x + speed);
     if (keysRef.current["ArrowUp"]) p.y = Math.max(0, p.y - speed);
     if (keysRef.current["ArrowDown"]) p.y = Math.min(H - TANK_H, p.y + speed);
+
+    if (bonusBombFramesRef.current > 0) bonusBombFramesRef.current--;
+    const comboActive = performance.now() < comboShotUntilMsRef.current;
 
     // Ally AI movement (free will): chases enemies with some randomness.
     if (allyActive && allyAliveRef.current) {
@@ -389,36 +428,36 @@ export const Tank: React.FC = () => {
         allyVelRef.current.vy += Math.sign(dyp || Math.random() - 0.5) * 0.6;
       }
 
-	      // Dodge incoming enemy bullets (instinct).
-	      // Look for enemy bullets above/near the ally and sidestep out of their x-lane.
-	      let closestThreat: Bullet | null = null;
-	      let closestAbove = Number.POSITIVE_INFINITY;
-	      for (const b of bullets.current) {
-	        if (b.owner !== "enemy") continue;
-	        const above = a.y - b.y; // >0 means bullet is above the ally
-	        if (above < -10 || above > 220) continue; // include a larger look-ahead window
-	        const ax = a.x + TANK_W / 2;
-	        const bx = b.x + BULLET_W / 2;
-	        const dx = bx - ax;
-	        if (Math.abs(dx) > 36) continue; // be less strict so dodging triggers reliably
-	        if (above < closestAbove) {
-	          closestAbove = above;
-	          closestThreat = b;
-	        }
-	      }
-	      if (closestThreat) {
-	        const ax = a.x + TANK_W / 2;
-	        const bx = closestThreat.x + BULLET_W / 2;
-	        const dir = ax <= bx ? -1 : 1; // move away from bullet x
-	        // Strong lateral impulse; if it's very close, force a full-speed sidestep.
-	        if (closestAbove < 50) {
-	          allyVelRef.current.vx = dir * allySpeed;
-	        } else {
-	          allyVelRef.current.vx += dir * 2.0;
-	        }
-	        // Bias slightly downward when dodging so it doesn't drift upward into danger.
-	        allyVelRef.current.vy += 0.25;
-	      }
+      // Dodge incoming enemy bullets (instinct).
+      // Look for enemy bullets above/near the ally and sidestep out of their x-lane.
+      let closestThreat: Bullet | null = null;
+      let closestAbove = Number.POSITIVE_INFINITY;
+      for (const b of bullets.current) {
+        if (b.owner !== "enemy") continue;
+        const above = a.y - b.y; // >0 means bullet is above the ally
+        if (above < -10 || above > 220) continue; // include a larger look-ahead window
+        const ax = a.x + TANK_W / 2;
+        const bx = b.x + BULLET_W / 2;
+        const dx = bx - ax;
+        if (Math.abs(dx) > 36) continue; // be less strict so dodging triggers reliably
+        if (above < closestAbove) {
+          closestAbove = above;
+          closestThreat = b;
+        }
+      }
+      if (closestThreat) {
+        const ax = a.x + TANK_W / 2;
+        const bx = closestThreat.x + BULLET_W / 2;
+        const dir = ax <= bx ? -1 : 1; // move away from bullet x
+        // Strong lateral impulse; if it's very close, force a full-speed sidestep.
+        if (closestAbove < 50) {
+          allyVelRef.current.vx = dir * allySpeed;
+        } else {
+          allyVelRef.current.vx += dir * 2.0;
+        }
+        // Bias slightly downward when dodging so it doesn't drift upward into danger.
+        allyVelRef.current.vy += 0.25;
+      }
 
       // Safety rails: if the ally gets too high, push it back down quickly.
       if (a.y < ALLY_MIN_Y) allyVelRef.current.vy += 0.9;
@@ -446,18 +485,84 @@ export const Tank: React.FC = () => {
       // Fire bullets from each gun head
       for (let head = 0; head < gunHeadsRef.current; head++) {
         const offsetX = (head - (gunHeadsRef.current - 1) / 2) * 10;
+        const bulletX = p.x + TANK_W / 2 - BULLET_W / 2 + offsetX;
 
-        // Fire multishot bullets if bonus is active
-        for (let shot = 0; shot < 1 + multishotCountRef.current; shot++) {
-          const angleOffset = (shot - multishotCountRef.current / 2) * 0.15;
-          const bulletX = p.x + TANK_W / 2 - BULLET_W / 2 + offsetX;
-
-          bullets.current.push({
-            x: bulletX,
-            y: p.y - BULLET_H,
-            owner: "player",
-          });
+        if (comboActive) {
+          // 8-direction combo shot (wide spread) for 5s.
+          const speed = 8;
+          const base = -Math.PI / 2;
+          const offsets = [-0.66, -0.46, -0.28, -0.12, 0, 0.12, 0.28, 0.46];
+          // If multishot is active too, slightly "double" each direction (keeps perf sane).
+          const multiFactor = multishotCountRef.current > 0 ? 2 : 1;
+          const micro = 0.06;
+          for (const off of offsets) {
+            for (let i = 0; i < multiFactor; i++) {
+              const tweak = i === 0 ? 0 : off === 0 ? micro : Math.sign(off) * micro;
+              const ang = base + off + tweak;
+              bullets.current.push({
+                x: bulletX,
+                y: p.y - BULLET_H,
+                owner: "player",
+                vx: Math.cos(ang) * speed,
+                vy: Math.sin(ang) * speed,
+              });
+            }
+          }
+        } else {
+          // Fire multishot bullets if bonus is active
+          for (let shot = 0; shot < 1 + multishotCountRef.current; shot++) {
+            bullets.current.push({
+              x: bulletX,
+              y: p.y - BULLET_H,
+              owner: "player",
+            });
+          }
         }
+      }
+
+      // Bonus bomb: on shoot, blast any nearby enemies (strong vs boss).
+      if (bonusBombFramesRef.current > 0) {
+        const cx = p.x + TANK_W / 2;
+        const cy = p.y;
+        impacts.current.push({
+          x: cx,
+          y: cy,
+          radius: 0,
+          maxRadius: BONUS_BOMB_RADIUS + 18,
+          life: 15,
+          color: "#000",
+        });
+        explode(cx, cy, LCD.ink);
+
+        enemies.current = enemies.current.filter((e) => {
+          const { w: ew, h: eh } = enemySize(e);
+          const ex = e.x + ew / 2;
+          const ey = e.y + eh / 2;
+          const dx = ex - cx;
+          const dy = ey - cy;
+          if (dx * dx + dy * dy > BONUS_BOMB_RADIUS * BONUS_BOMB_RADIUS) {
+            return true;
+          }
+
+          if (e.kind === "boss") {
+            e.hitCooldown = 0;
+            e.hp -= BONUS_BOMB_BOSS_DAMAGE;
+            smash(ex, ey, LCD.ink);
+            explode(ex, ey, LCD.ink2);
+            if (e.hp > 0) return true;
+          } else {
+            e.hp = 0;
+            smash(ex, ey, LCD.ink);
+            explode(ex, ey, e.color);
+          }
+
+          spawnBonus(ex, ey, e.kind === "boss");
+          scoreRef.current += e.kind === "boss" ? 500 : 100;
+          setDisplayScore(scoreRef.current);
+          updateScore(currentGame, scoreRef.current);
+          explode(ex, ey, e.color);
+          return false;
+        });
       }
       shootCooldown.current = 15;
     }
@@ -470,13 +575,34 @@ export const Tank: React.FC = () => {
         // Mirror the player's current firepower (gun heads + multishot).
         for (let head = 0; head < gunHeadsRef.current; head++) {
           const offsetX = (head - (gunHeadsRef.current - 1) / 2) * 10;
-          for (let shot = 0; shot < 1 + multishotCountRef.current; shot++) {
-            const bulletX = a.x + TANK_W / 2 - BULLET_W / 2 + offsetX;
-            bullets.current.push({
-              x: bulletX,
-              y: a.y - BULLET_H,
-              owner: "ally",
-            });
+          const bulletX = a.x + TANK_W / 2 - BULLET_W / 2 + offsetX;
+          if (comboActive) {
+            const speed = 8;
+            const base = -Math.PI / 2;
+            const offsets = [-0.66, -0.46, -0.28, -0.12, 0, 0.12, 0.28, 0.46];
+            const multiFactor = multishotCountRef.current > 0 ? 2 : 1;
+            const micro = 0.06;
+            for (const off of offsets) {
+              for (let i = 0; i < multiFactor; i++) {
+                const tweak = i === 0 ? 0 : off === 0 ? micro : Math.sign(off) * micro;
+                const ang = base + off + tweak;
+                bullets.current.push({
+                  x: bulletX,
+                  y: a.y - BULLET_H,
+                  owner: "ally",
+                  vx: Math.cos(ang) * speed,
+                  vy: Math.sin(ang) * speed,
+                });
+              }
+            }
+          } else {
+            for (let shot = 0; shot < 1 + multishotCountRef.current; shot++) {
+              bullets.current.push({
+                x: bulletX,
+                y: a.y - BULLET_H,
+                owner: "ally",
+              });
+            }
           }
         }
         allyShootCooldown.current = 24;
@@ -559,6 +685,17 @@ export const Tank: React.FC = () => {
       e.x += e.vx;
       e.y += e.vy;
       if (e.x < 0 || e.x > W - ew) e.vx *= -1;
+      if (e.kind === "boss") {
+        // Boss should never descend into the lower playfield: keep it hovering
+        // in the upper band while moving left/right and up/down.
+        if (e.y < BOSS_MIN_Y) {
+          e.y = BOSS_MIN_Y;
+          e.vy = Math.abs(e.vy);
+        } else if (e.y > BOSS_MAX_Y) {
+          e.y = BOSS_MAX_Y;
+          e.vy = -Math.abs(e.vy);
+        }
+      }
 
       // Enemy shoot
       e.shootTimer--;
@@ -579,14 +716,33 @@ export const Tank: React.FC = () => {
           const baseShoot = Math.max(14, 70 - e.level * 2);
           e.shootTimer = baseShoot + Math.floor(Math.random() * 30);
         } else {
-          const offsets =
-            e.guns === 3 ? [-8, 0, 8] : e.guns === 2 ? [-6, 6] : [0];
-          for (const dx of offsets) {
-            bullets.current.push({
-              x: e.x + ew / 2 - BULLET_W / 2 + dx,
-              y: e.y + eh,
-              owner: "enemy",
-            });
+          if (e.combo) {
+            // 3-way "combo" spread (rare enemy trait).
+            const speed = 5;
+            const base = Math.PI / 2; // downward
+            const spread = 0.28;
+            const angles = [base - spread, base, base + spread];
+            const bx = e.x + ew / 2 - BULLET_W / 2;
+            const by = e.y + eh;
+            for (const ang of angles) {
+              bullets.current.push({
+                x: bx,
+                y: by,
+                owner: "enemy",
+                vx: Math.cos(ang) * speed,
+                vy: Math.sin(ang) * speed,
+              });
+            }
+          } else {
+            const offsets =
+              e.guns === 3 ? [-8, 0, 8] : e.guns === 2 ? [-6, 6] : [0];
+            for (const dx of offsets) {
+              bullets.current.push({
+                x: e.x + ew / 2 - BULLET_W / 2 + dx,
+                y: e.y + eh,
+                owner: "enemy",
+              });
+            }
           }
           const baseShoot = Math.max(22, 95 - e.level * 4);
           e.shootTimer = baseShoot + Math.floor(Math.random() * 50);
@@ -679,8 +835,14 @@ export const Tank: React.FC = () => {
 
     bullets.current = bullets.current.filter((b) => {
       const friendly = b.owner === "player" || b.owner === "ally";
-      b.y += friendly ? -8 : 5;
+      if (friendly) {
+        b.x += b.vx ?? 0;
+        b.y += b.vy ?? -8;
+      } else {
+        b.y += b.vy ?? 5;
+      }
       if (b.y < -20 || b.y > H + 20) return false;
+      if (b.x < -20 || b.x > W + 20) return false;
 
       ctx.fillStyle = friendly ? LCD.ink : LCD.ink2;
       ctx.fillRect(b.x, b.y, BULLET_W, BULLET_H);
@@ -805,30 +967,30 @@ export const Tank: React.FC = () => {
           return false;
         }
 
-	        // Enemy bullet can kill ally (instant game over)
-	        const allyActive = levelRef.current >= ALLY_START_LEVEL;
-	        if (allyActive && allyAliveRef.current) {
-	          const a = allyPos.current;
-	          if (
-	            b.x + BULLET_W > a.x &&
-	            b.x < a.x + TANK_W &&
-	            b.y + BULLET_H > a.y &&
-	            b.y < a.y + TANK_H
-	          ) {
-	            // Player shield also protects the ally (shared shield pool).
-	            if (shieldHpRef.current > 0) {
-	              shieldHpRef.current--;
-	              setDisplayShield(shieldHpRef.current);
-	              smash(b.x + BULLET_W / 2, b.y + BULLET_H / 2, LCD.ink);
-	              explode(b.x + BULLET_W / 2, b.y + BULLET_H / 2, LCD.ink2);
-	              if (shieldHpRef.current === 0) setDisplayShield(0);
-	              return false;
-	            }
+        // Enemy bullet can kill ally (instant game over)
+        const allyActive = levelRef.current >= ALLY_START_LEVEL;
+        if (allyActive && allyAliveRef.current) {
+          const a = allyPos.current;
+          if (
+            b.x + BULLET_W > a.x &&
+            b.x < a.x + TANK_W &&
+            b.y + BULLET_H > a.y &&
+            b.y < a.y + TANK_H
+          ) {
+            // Player shield also protects the ally (shared shield pool).
+            if (shieldHpRef.current > 0) {
+              shieldHpRef.current--;
+              setDisplayShield(shieldHpRef.current);
+              smash(b.x + BULLET_W / 2, b.y + BULLET_H / 2, LCD.ink);
+              explode(b.x + BULLET_W / 2, b.y + BULLET_H / 2, LCD.ink2);
+              if (shieldHpRef.current === 0) setDisplayShield(0);
+              return false;
+            }
 
-	            explode(a.x + TANK_W / 2, a.y + TANK_H / 2, LCD.ink);
-	            // Ally must be protected: costs 2 lives per hit.
-	            livesRef.current -= 2;
-	            setDisplayLives(livesRef.current);
+            explode(a.x + TANK_W / 2, a.y + TANK_H / 2, LCD.ink);
+            // Ally must be protected: costs 2 lives per hit.
+            livesRef.current -= 2;
+            setDisplayLives(livesRef.current);
             setLives(livesRef.current);
             if (livesRef.current <= 0) setStatus("gameover");
             return false;
@@ -882,6 +1044,28 @@ export const Tank: React.FC = () => {
           Math.PI * 2,
         );
         ctx.fill();
+      } else if (bonus.type === "comboshot") {
+        // Combo shot: transparent 8-point starburst.
+        const cx = bonus.x + BONUS_W / 2;
+        const cy = bonus.y + BONUS_H / 2;
+        const r = BONUS_W / 2;
+        ctx.save();
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = "#000";
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        for (let i = 0; i < 8; i++) {
+          const ang = (i * Math.PI) / 4;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r);
+          ctx.stroke();
+        }
+        ctx.restore();
       } else if (bonus.type === "gunheads") {
         // Transparent with black border
         ctx.strokeStyle = LCD.ink;
@@ -895,6 +1079,38 @@ export const Tank: React.FC = () => {
           Math.PI * 2,
         );
         ctx.stroke();
+      } else if (bonus.type === "bomb") {
+        // Bonus bomb: transparent square with black border.
+        ctx.save();
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bonus.x, bonus.y, BONUS_W, BONUS_H);
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = "#000";
+        ctx.fillRect(bonus.x + 2, bonus.y + 2, BONUS_W - 4, BONUS_H - 4);
+        ctx.restore();
+      } else if (bonus.type === "refill") {
+        // Refill life: a transparent plus with black border.
+        const cx = bonus.x + BONUS_W / 2;
+        const cy = bonus.y + BONUS_H / 2;
+        const arm = Math.max(3, Math.floor(BONUS_W / 3));
+        const thickness = 4;
+
+        ctx.save();
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+
+        // Filled (transparent) plus
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = "#000";
+        ctx.fillRect(cx - thickness / 2, cy - arm, thickness, arm * 2);
+        ctx.fillRect(cx - arm, cy - thickness / 2, arm * 2, thickness);
+        ctx.globalAlpha = 1;
+
+        // Border (two rectangles)
+        ctx.strokeRect(cx - thickness / 2, cy - arm, thickness, arm * 2);
+        ctx.strokeRect(cx - arm, cy - thickness / 2, arm * 2, thickness);
+        ctx.restore();
       } else if (bonus.type === "shield") {
         // Shield: half transparent / half black with black border.
         const cx = bonus.x + BONUS_W / 2;
@@ -963,6 +1179,16 @@ export const Tank: React.FC = () => {
           // Refresh shield to full (3 hits).
           shieldHpRef.current = 3;
           setDisplayShield(3);
+        } else if (bonus.type === "bomb") {
+          // Bomb lasts 7s; refreshes if picked again.
+          bonusBombFramesRef.current = BONUS_BOMB_DURATION_FRAMES;
+        } else if (bonus.type === "comboshot") {
+          comboShotUntilMsRef.current = performance.now() + COMBO_SHOT_DURATION_MS;
+        } else if (bonus.type === "refill") {
+          // Refill lives (adds 5 once; still capped).
+          livesRef.current = Math.min(8, livesRef.current + 5);
+          setDisplayLives(livesRef.current);
+          setLives(livesRef.current);
         } else {
           // Increase lives (max 8)
           livesRef.current = Math.min(8, livesRef.current + 1);
@@ -993,6 +1219,15 @@ export const Tank: React.FC = () => {
           } else if (bonus.type === "shield") {
             shieldHpRef.current = 3;
             setDisplayShield(3);
+          } else if (bonus.type === "bomb") {
+            bonusBombFramesRef.current = BONUS_BOMB_DURATION_FRAMES;
+          } else if (bonus.type === "comboshot") {
+            comboShotUntilMsRef.current =
+              performance.now() + COMBO_SHOT_DURATION_MS;
+          } else if (bonus.type === "refill") {
+            livesRef.current = Math.min(8, livesRef.current + 5);
+            setDisplayLives(livesRef.current);
+            setLives(livesRef.current);
           } else {
             livesRef.current = Math.min(8, livesRef.current + 1);
             setDisplayLives(livesRef.current);
@@ -1029,91 +1264,91 @@ export const Tank: React.FC = () => {
       ctx.stroke();
       ctx.restore();
 
-	      if (
-	        !playerHitThisFrame &&
-	        bomb.x + 8 > p.x &&
-	        bomb.x - 8 < p.x + TANK_W &&
-	        bomb.y + 8 > p.y &&
-	        bomb.y - 8 < p.y + TANK_H
-	      ) {
-	        playerHitThisFrame = true;
-	        // Shield absorbs bombs too.
-	        if (shieldHpRef.current > 0) {
-	          shieldHpRef.current--;
-	          setDisplayShield(shieldHpRef.current);
-	          smash(bomb.x, bomb.y, LCD.ink);
-	          explode(bomb.x, bomb.y, LCD.ink2);
-	          if (shieldHpRef.current === 0) setDisplayShield(0);
-	          return false;
-	        }
-	        explode(p.x + TANK_W / 2, p.y + TANK_H / 2, LCD.ink);
-	        livesRef.current -= 3;
-	        setDisplayLives(livesRef.current);
-	        setLives(livesRef.current);
-	        if (livesRef.current <= 0) setStatus("gameover");
+      if (
+        !playerHitThisFrame &&
+        bomb.x + 8 > p.x &&
+        bomb.x - 8 < p.x + TANK_W &&
+        bomb.y + 8 > p.y &&
+        bomb.y - 8 < p.y + TANK_H
+      ) {
+        playerHitThisFrame = true;
+        // Shield absorbs bombs too.
+        if (shieldHpRef.current > 0) {
+          shieldHpRef.current--;
+          setDisplayShield(shieldHpRef.current);
+          smash(bomb.x, bomb.y, LCD.ink);
+          explode(bomb.x, bomb.y, LCD.ink2);
+          if (shieldHpRef.current === 0) setDisplayShield(0);
+          return false;
+        }
+        explode(p.x + TANK_W / 2, p.y + TANK_H / 2, LCD.ink);
+        livesRef.current -= 3;
+        setDisplayLives(livesRef.current);
+        setLives(livesRef.current);
+        if (livesRef.current <= 0) setStatus("gameover");
         p.x = W / 2 - TANK_W / 2;
         p.y = H - TANK_H - 20;
         return false;
       }
 
-	      // Bomb can also hit ally.
-	      const allyActive = levelRef.current >= ALLY_START_LEVEL;
-	      if (allyActive && allyAliveRef.current) {
-	        const a = allyPos.current;
-	        if (
-	          !playerHitThisFrame &&
-	          bomb.x + 8 > a.x &&
-	          bomb.x - 8 < a.x + TANK_W &&
-	          bomb.y + 8 > a.y &&
-	          bomb.y - 8 < a.y + TANK_H
-	        ) {
-	          playerHitThisFrame = true;
-	          // Shared shield protects ally as well.
-	          if (shieldHpRef.current > 0) {
-	            shieldHpRef.current--;
-	            setDisplayShield(shieldHpRef.current);
-	            smash(bomb.x, bomb.y, LCD.ink);
-	            explode(bomb.x, bomb.y, LCD.ink2);
-	            if (shieldHpRef.current === 0) setDisplayShield(0);
-	            return false;
-	          }
+      // Bomb can also hit ally.
+      const allyActive = levelRef.current >= ALLY_START_LEVEL;
+      if (allyActive && allyAliveRef.current) {
+        const a = allyPos.current;
+        if (
+          !playerHitThisFrame &&
+          bomb.x + 8 > a.x &&
+          bomb.x - 8 < a.x + TANK_W &&
+          bomb.y + 8 > a.y &&
+          bomb.y - 8 < a.y + TANK_H
+        ) {
+          playerHitThisFrame = true;
+          // Shared shield protects ally as well.
+          if (shieldHpRef.current > 0) {
+            shieldHpRef.current--;
+            setDisplayShield(shieldHpRef.current);
+            smash(bomb.x, bomb.y, LCD.ink);
+            explode(bomb.x, bomb.y, LCD.ink2);
+            if (shieldHpRef.current === 0) setDisplayShield(0);
+            return false;
+          }
 
-	          explode(a.x + TANK_W / 2, a.y + TANK_H / 2, LCD.ink);
-	          livesRef.current -= 3;
-	          setDisplayLives(livesRef.current);
-	          setLives(livesRef.current);
-	          if (livesRef.current <= 0) setStatus("gameover");
-	          return false;
-	        }
-	      }
+          explode(a.x + TANK_W / 2, a.y + TANK_H / 2, LCD.ink);
+          livesRef.current -= 3;
+          setDisplayLives(livesRef.current);
+          setLives(livesRef.current);
+          if (livesRef.current <= 0) setStatus("gameover");
+          return false;
+        }
+      }
 
       return true;
     });
 
-	    // Draw player
-	    drawTank(ctx, p.x, p.y, LCD.ink, TANK_W, TANK_H);
-	    if (shieldHpRef.current > 0) {
-	      ctx.save();
-	      ctx.strokeStyle = "#000";
-	      ctx.lineWidth = 2;
-	      ctx.globalAlpha = 0.85;
-	      ctx.strokeRect(p.x - 3, p.y - 3, TANK_W + 6, TANK_H + 6);
-	      ctx.globalAlpha = 1;
-	      ctx.restore();
-	    }
-	    if (allyActive && allyAliveRef.current) {
-	      const a = allyPos.current;
-	      drawAlly(ctx, a.x, a.y, TANK_W, TANK_H);
-	      if (shieldHpRef.current > 0) {
-	        ctx.save();
-	        ctx.strokeStyle = "#000";
-	        ctx.lineWidth = 2;
-	        ctx.globalAlpha = 0.85;
-	        ctx.strokeRect(a.x - 3, a.y - 3, TANK_W + 6, TANK_H + 6);
-	        ctx.globalAlpha = 1;
-	        ctx.restore();
-	      }
-	    }
+    // Draw player
+    drawTank(ctx, p.x, p.y, LCD.ink, TANK_W, TANK_H);
+    if (shieldHpRef.current > 0) {
+      ctx.save();
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.85;
+      ctx.strokeRect(p.x - 3, p.y - 3, TANK_W + 6, TANK_H + 6);
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+    if (allyActive && allyAliveRef.current) {
+      const a = allyPos.current;
+      drawAlly(ctx, a.x, a.y, TANK_W, TANK_H);
+      if (shieldHpRef.current > 0) {
+        ctx.save();
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.85;
+        ctx.strokeRect(a.x - 3, a.y - 3, TANK_W + 6, TANK_H + 6);
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    }
 
     rafRef.current = requestAnimationFrame(loop);
   }, [
@@ -1145,6 +1380,8 @@ export const Tank: React.FC = () => {
     bombs.current = [];
     multishotCountRef.current = 0;
     gunHeadsRef.current = 1;
+    bonusBombFramesRef.current = 0;
+    comboShotUntilMsRef.current = 0;
     playerPos.current = { x: W / 2 - TANK_W / 2, y: H - TANK_H - 20 };
     allyPos.current = { x: W / 2 - TANK_W / 2, y: H - TANK_H - 70 };
     allyAliveRef.current = false;
