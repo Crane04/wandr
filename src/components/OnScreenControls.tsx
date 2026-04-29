@@ -117,7 +117,7 @@ export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
   const action = useMemo(() => {
     if (currentGame === "tetris")
       return { key: "ArrowUp" as const, label: "" };
-    if (currentGame === "tank") return { key: " " as const, label: "" };
+    if (currentGame === "fighter") return { key: " " as const, label: "" };
     if (currentGame === "brickbreaker")
       return { key: " " as const, label: "" };
     return { key: " " as const, label: "" };

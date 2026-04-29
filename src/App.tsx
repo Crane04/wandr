@@ -10,19 +10,19 @@ import { OnScreenControls } from "./components/OnScreenControls";
 import type { GameName } from "./types";
 
 const GAME_ORDER: GameName[] = [
+  "fighter",
   "tetris",
   "brickbreaker",
   "snake",
   "racing",
-  "tank",
 ];
 
 const GAME_LABEL: Record<GameName, string> = {
+  fighter: "FIGHT",
   tetris: "TETRIS",
   brickbreaker: "BRICK",
   snake: "SNAKE",
   racing: "RACE",
-  tank: "TANK",
 };
 
 export const App: React.FC = () => {
@@ -40,6 +40,8 @@ export const App: React.FC = () => {
 
   const GameView = useMemo(() => {
     switch (currentGame) {
+      case "fighter":
+        return <Tank />;
       case "tetris":
         return <Tetris />;
       case "brickbreaker":
@@ -48,8 +50,6 @@ export const App: React.FC = () => {
         return <Snake />;
       case "racing":
         return <Racing />;
-      case "tank":
-        return <Tank />;
       default:
         return null;
     }

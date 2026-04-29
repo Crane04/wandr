@@ -8,21 +8,21 @@ import React, {
 import { GameName, GameStatus, GameScore, GameState } from "../types";
 
 const defaultScores: GameScore = {
+  fighter: 0,
   tetris: 0,
   brickbreaker: 0,
   snake: 0,
   racing: 0,
-  tank: 0,
 };
 
 const GameContext = createContext<GameState | null>(null);
 
 const GAME_ORDER: GameName[] = [
+  "fighter",
   "tetris",
   "brickbreaker",
   "snake",
   "racing",
-  "tank",
 ];
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -34,10 +34,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   const [speed, setSpeed] = useState<number | null>(null);
   const [currentGame, setCurrentGame] = useState<GameName>(() => {
     try {
-      const saved = localStorage.getItem("brickgame-lastgame") as GameName | null;
-      return saved && GAME_ORDER.includes(saved) ? saved : "tetris";
+      const raw = localStorage.getItem("brickgame-lastgame");
+      const saved = raw === "tank" ? "fighter" : raw;
+      return saved && GAME_ORDER.includes(saved as GameName)
+        ? (saved as GameName)
+        : "fighter";
     } catch {
-      return "tetris";
+      return "fighter";
     }
   });
   const [status, setStatus] = useState<GameStatus>("idle");
@@ -45,7 +48,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   const [highScores, setHighScores] = useState<GameScore>(() => {
     try {
       const saved = localStorage.getItem("brickgame-highscores");
-      return saved ? JSON.parse(saved) : { ...defaultScores };
+      const parsed: Partial<Record<string, unknown>> | null = saved
+        ? JSON.parse(saved)
+        : null;
+      const tankScore =
+        parsed && typeof parsed["tank"] === "number" ? (parsed["tank"] as number) : 0;
+      const fighterScore =
+        parsed && typeof parsed["fighter"] === "number"
+          ? (parsed["fighter"] as number)
+          : tankScore;
+      return {
+        ...defaultScores,
+        ...(parsed ?? {}),
+        fighter: fighterScore,
+      } as GameScore;
     } catch {
       return { ...defaultScores };
     }

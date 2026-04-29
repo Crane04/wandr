@@ -2,11 +2,11 @@ import React from "react";
 import type { GameName } from "../types";
 
 const GAME_LABEL: Record<GameName, string> = {
+  fighter: "Fighter",
   tetris: "Tetris",
   brickbreaker: "Brick Breaker",
   snake: "Snake",
   racing: "Racing",
-  tank: "Tank",
 };
 
 export const RetroShell: React.FC<{
