@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useGame } from "./context/GameContext";
 import { Tetris } from "./games/Tetris";
 import { BrickBreaker } from "./games/BrickBreaker";
@@ -7,7 +7,7 @@ import { Racing } from "./games/Racing";
 import { Tank } from "./games/Tank";
 import { RetroShell } from "./components/RetroShell";
 import { OnScreenControls } from "./components/OnScreenControls";
-import type { GameName } from "./types";
+import type { GameName, GameStatus } from "./types";
 
 const GAME_ORDER: GameName[] = [
   "fighter",
@@ -36,7 +36,22 @@ export const App: React.FC = () => {
     lives,
     level,
     speed,
+    soundEnabled,
+    musicEnabled,
+    toggleSound,
+    toggleMusic,
+    playSfx,
   } = useGame();
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const [prevStatus, setPrevStatus] = useState<GameStatus>(status);
+  useEffect(() => {
+    if (status === prevStatus) return;
+    if (status === "gameover") playSfx("game-over");
+    if (status === "playing" && prevStatus === "idle") playSfx("game-start");
+    setPrevStatus(status);
+  }, [playSfx, prevStatus, status]);
 
   const GameView = useMemo(() => {
     switch (currentGame) {
@@ -64,7 +79,67 @@ export const App: React.FC = () => {
       lives={lives}
       level={level}
       speed={speed}
-      onSelectGame={setCurrentGame}
+      onSelectGame={(g) => {
+        setCurrentGame(g);
+        playSfx("select");
+      }}
+      topControls={
+        <button
+          type="button"
+          className="retro-top-btn"
+          onClick={() => setSettingsOpen((v) => !v)}
+          aria-pressed={settingsOpen}
+          aria-label="Toggle settings"
+        >
+          ⚙
+        </button>
+      }
+      settingsPanel={
+        settingsOpen ? (
+          <div
+            className="retro-settings-panel"
+            role="dialog"
+            aria-label="Settings"
+          >
+            <div className="retro-settings-row">
+              <div className="retro-settings-title">SOUND</div>
+              <div className="retro-settings-actions">
+                <button
+                  type="button"
+                  className={
+                    soundEnabled
+                      ? "retro-settings-pill retro-settings-pill-active"
+                      : "retro-settings-pill"
+                  }
+                  onClick={() => toggleSound()}
+                  aria-pressed={soundEnabled}
+                >
+                  SFX {soundEnabled ? "ON" : "OFF"}
+                </button>
+                <button
+                  type="button"
+                  className={
+                    musicEnabled
+                      ? "retro-settings-pill retro-settings-pill-active"
+                      : "retro-settings-pill"
+                  }
+                  onClick={() => toggleMusic()}
+                  aria-pressed={musicEnabled}
+                >
+                  MUSIC {musicEnabled ? "ON" : "OFF"}
+                </button>
+                <button
+                  type="button"
+                  className="retro-settings-pill"
+                  onClick={() => setSettingsOpen(false)}
+                >
+                  CLOSE
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null
+      }
       controls={<OnScreenControls currentGame={currentGame} />}
     >
       <div className="retro-game-wrap" data-status={status}>
@@ -81,13 +156,18 @@ export const App: React.FC = () => {
                       ? "retro-picker-brick retro-picker-brick-active"
                       : "retro-picker-brick"
                   }
-                  onClick={() => setCurrentGame(g)}
+                  onClick={() => {
+                    setCurrentGame(g);
+                    playSfx("select");
+                  }}
                 >
                   {GAME_LABEL[g]}
                 </button>
               ))}
             </div>
-            <div className="retro-picker-hint">◀ ▶ to choose · START/PAUSE to play</div>
+            <div className="retro-picker-hint">
+              ◀ ▶ to choose · START/PAUSE to play
+            </div>
           </div>
         ) : null}
         {poweredOn && status === "gameover" ? (

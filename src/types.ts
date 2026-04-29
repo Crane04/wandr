@@ -18,6 +18,8 @@ export interface GameState {
   currentGame: GameName;
   status: GameStatus;
   poweredOn: boolean;
+  soundEnabled: boolean;
+  musicEnabled: boolean;
   lives: number | null;
   level: number | null;
   speed: number | null;
@@ -27,6 +29,17 @@ export interface GameState {
   setStatus: (status: GameStatus) => void;
   setPoweredOn: (on: boolean) => void;
   togglePower: () => void;
+  toggleSound: () => void;
+  toggleMusic: () => void;
+  playSfx: (
+    name:
+      | "game-over"
+      | "game-start"
+      | "move"
+      | "power-on"
+      | "select"
+      | "shot"
+  ) => void;
   setLives: (lives: number | null) => void;
   setLevel: (level: number | null) => void;
   setSpeed: (speed: number | null) => void;

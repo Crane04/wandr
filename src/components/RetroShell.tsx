@@ -1,14 +1,6 @@
 import React from "react";
 import type { GameName } from "../types";
 
-const GAME_LABEL: Record<GameName, string> = {
-  fighter: "Fighter",
-  tetris: "Tetris",
-  brickbreaker: "Brick Breaker",
-  snake: "Snake",
-  racing: "Racing",
-};
-
 export const RetroShell: React.FC<{
   currentGame: GameName;
   score: number;
@@ -18,6 +10,8 @@ export const RetroShell: React.FC<{
   level: number | null;
   speed: number | null;
   onSelectGame: (g: GameName) => void;
+  topControls?: React.ReactNode;
+  settingsPanel?: React.ReactNode;
   controls?: React.ReactNode;
   children: React.ReactNode;
 }> = ({
@@ -29,6 +23,8 @@ export const RetroShell: React.FC<{
   level,
   speed,
   onSelectGame,
+  topControls,
+  settingsPanel,
   controls,
   children,
 }) => {
@@ -37,11 +33,22 @@ export const RetroShell: React.FC<{
       <div className="retro-device" data-power={poweredOn ? "on" : "off"}>
         <div className="retro-holes retro-holes-left" aria-hidden="true" />
         <div className="retro-holes retro-holes-right" aria-hidden="true" />
+
         <div className="retro-screen-frame">
           <div className="retro-screen-top">
-            <div className="retro-screen-title">wandr by <a href="https://crane04.dev" target="_blank" rel="noopener noreferrer">
-              crane04
-            </a></div>
+            <div className="retro-screen-title">
+              wandr by{" "}
+              <a
+                href="https://crane04.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                crane04
+              </a>
+            </div>
+            {topControls ? (
+              <div className="retro-screen-controls">{topControls}</div>
+            ) : null}
             <div className="retro-scoreline">
               <span className="retro-score">
                 {highScore.toString().padStart(5, "0")}
@@ -94,6 +101,10 @@ export const RetroShell: React.FC<{
               ) : null}
             </div>
           </div>
+
+          {settingsPanel ? (
+            <div className="retro-settings-host">{settingsPanel}</div>
+          ) : null}
         </div>
 
         <div className="retro-bottom">{controls}</div>

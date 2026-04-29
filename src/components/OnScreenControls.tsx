@@ -1,15 +1,8 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGame } from "../context/GameContext";
 import type { GameName } from "../types";
 
 type ControlKey = "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight" | " ";
-
 type ArrowDir = "up" | "down" | "left" | "right";
 
 const ArrowIcon: React.FC<{ dir: ArrowDir; title: string }> = ({
@@ -60,31 +53,39 @@ const REPEAT_MS: Partial<Record<ControlKey, number>> = {
 };
 
 const clickGameStartPause = () => {
-  const btn = document.querySelector<HTMLButtonElement>(
-    ".game-controls button",
-  );
+  const btn = document.querySelector<HTMLButtonElement>(".game-controls button");
   btn?.click();
 };
 
-export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
-  currentGame,
-}) => {
-  const { poweredOn, togglePower } = useGame();
+const useVirtualControls = (currentGame: GameName) => {
+  const {
+    poweredOn,
+    togglePower,
+    soundEnabled,
+    musicEnabled,
+    toggleSound,
+    toggleMusic,
+    playSfx,
+  } = useGame();
+
   const [pressed, setPressed] = useState<Set<ControlKey>>(() => new Set());
   const repeatTimers = useRef<Map<ControlKey, number>>(new Map());
 
   const stopRepeating = useCallback((key: ControlKey) => {
-    const t = repeatTimers.current.get(key);
-    if (t) window.clearInterval(t);
+    const timer = repeatTimers.current.get(key);
+    if (timer) window.clearInterval(timer);
     repeatTimers.current.delete(key);
   }, []);
 
   const press = useCallback(
     (key: ControlKey) => {
       if (!poweredOn) return;
+      if (key !== " ") playSfx("move");
+
       setPressed((prev) => new Set(prev).add(key));
       dispatchKey(key, "keydown");
       stopRepeating(key);
+
       const ms = REPEAT_MS[key];
       if (ms) {
         const interval = window.setInterval(
@@ -94,7 +95,7 @@ export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
         repeatTimers.current.set(key, interval);
       }
     },
-    [stopRepeating],
+    [playSfx, poweredOn, stopRepeating],
   );
 
   const release = useCallback(
@@ -143,7 +144,6 @@ export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
           release(key);
         },
         onPointerLeave: (e: React.PointerEvent) => {
-          // Only release if no buttons are pressed
           if (e.buttons === 0) release(key);
         },
         "aria-pressed": isDown,
@@ -153,52 +153,53 @@ export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
   );
 
   const action = useMemo(() => {
-    if (currentGame === "tetris")
-      return { key: "ArrowUp" as const, label: "" };
+    if (currentGame === "tetris") return { key: "ArrowUp" as const, label: "" };
     if (currentGame === "fighter") return { key: " " as const, label: "" };
-    if (currentGame === "brickbreaker")
-      return { key: " " as const, label: "" };
+    if (currentGame === "brickbreaker") return { key: " " as const, label: "" };
     return { key: " " as const, label: "" };
   }, [currentGame]);
+
+  return {
+    poweredOn,
+    togglePower,
+    soundEnabled,
+    musicEnabled,
+    toggleSound,
+    toggleMusic,
+    playSfx,
+    bind,
+    action,
+  };
+};
+
+export const OnScreenControlsPortrait: React.FC<{ currentGame: GameName }> = ({
+  currentGame,
+}) => {
+  const {
+    poweredOn,
+    togglePower,
+    soundEnabled,
+    musicEnabled,
+    toggleSound,
+    toggleMusic,
+    playSfx,
+    bind,
+    action,
+  } = useVirtualControls(currentGame);
 
   return (
     <div className="retro-controls" aria-label="On-screen controls">
       <div className="retro-dpad" role="group" aria-label="D-pad">
-        <button
-          className="dpad up"
-          type="button"
-          aria-label="Up"
-          // data-label="UP"
-          {...bind("ArrowUp")}
-        >
+        <button className="dpad up" type="button" aria-label="Up" {...bind("ArrowUp")}>
           <ArrowIcon dir="up" title="Up" />
         </button>
-        <button
-          className="dpad left"
-          type="button"
-          aria-label="Left"
-          // data-label="LEFT"
-          {...bind("ArrowLeft")}
-        >
+        <button className="dpad left" type="button" aria-label="Left" {...bind("ArrowLeft")}>
           <ArrowIcon dir="left" title="Left" />
         </button>
-
-        <button
-          className="dpad right"
-          type="button"
-          aria-label="Right"
-          // data-label="RIGHT"
-          {...bind("ArrowRight")}
-        >
+        <button className="dpad right" type="button" aria-label="Right" {...bind("ArrowRight")}>
           <ArrowIcon dir="right" title="Right" />
         </button>
-        <button
-          className="dpad down"
-          type="button"
-          aria-label="Down"
-          // data-label="DOWN"
-          {...bind("ArrowDown")}
-        >
+        <button className="dpad down" type="button" aria-label="Down" {...bind("ArrowDown")}>
           <ArrowIcon dir="down" title="Down" />
         </button>
       </div>
@@ -214,11 +215,15 @@ export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
         >
           START/PAUSE
         </button>
+
         <div className="retro-toggles" role="group" aria-label="Toggles">
           <button
             className="retro-toggle retro-toggle-btn"
             type="button"
-            onClick={() => togglePower()}
+            onClick={() => {
+              if (!poweredOn) playSfx("power-on");
+              togglePower();
+            }}
             aria-pressed={poweredOn}
           >
             <span
@@ -227,14 +232,32 @@ export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
             />
             <span className="retro-toggle-label">ON/OFF</span>
           </button>
-          <div className="retro-toggle">
-            <span className="retro-dot" aria-hidden="true" />
+
+          <button
+            className="retro-toggle retro-toggle-btn"
+            type="button"
+            onClick={() => toggleSound()}
+            aria-pressed={soundEnabled}
+          >
+            <span
+              className={soundEnabled ? "retro-dot" : "retro-dot retro-dot-off"}
+              aria-hidden="true"
+            />
             <span className="retro-toggle-label">SOUND</span>
-          </div>
-          <div className="retro-toggle">
-            <span className="retro-dot" aria-hidden="true" />
+          </button>
+
+          <button
+            className="retro-toggle retro-toggle-btn"
+            type="button"
+            onClick={() => toggleMusic()}
+            aria-pressed={musicEnabled}
+          >
+            <span
+              className={musicEnabled ? "retro-dot" : "retro-dot retro-dot-off"}
+              aria-hidden="true"
+            />
             <span className="retro-toggle-label">MUSIC</span>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -247,3 +270,7 @@ export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
     </div>
   );
 };
+
+export const OnScreenControls: React.FC<{ currentGame: GameName }> = ({
+  currentGame,
+}) => <OnScreenControlsPortrait currentGame={currentGame} />;

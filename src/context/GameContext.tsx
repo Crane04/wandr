@@ -4,6 +4,7 @@ import React, {
   useState,
   useCallback,
   useEffect,
+  useRef,
 } from "react";
 import { GameName, GameStatus, GameScore, GameState } from "../types";
 
@@ -29,6 +30,26 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [poweredOn, setPoweredOn] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    try {
+      const raw = localStorage.getItem("wandr_sound");
+      if (raw === "0") return false;
+      if (raw === "1") return true;
+      return true;
+    } catch {
+      return true;
+    }
+  });
+  const [musicEnabled, setMusicEnabled] = useState(() => {
+    try {
+      const raw = localStorage.getItem("wandr_music");
+      if (raw === "0") return false;
+      if (raw === "1") return true;
+      return true;
+    } catch {
+      return true;
+    }
+  });
   const [lives, setLives] = useState<number | null>(null);
   const [level, setLevel] = useState<number | null>(null);
   const [speed, setSpeed] = useState<number | null>(null);
@@ -76,6 +97,64 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     setSpeed(null);
   }, []);
 
+  const audioCache = useRef<Map<string, HTMLAudioElement>>(new Map());
+
+  const playSfx = useCallback(
+    (
+      name:
+        | "game-over"
+        | "game-start"
+        | "move"
+        | "power-on"
+        | "select"
+        | "shot",
+    ) => {
+      if (!soundEnabled) return;
+      if (typeof window === "undefined") return;
+      if (document.visibilityState === "hidden") return;
+      const src = `/sounds/${name}.mp3`;
+      const base = (() => {
+        const cached = audioCache.current.get(src);
+        if (cached) return cached;
+        const a = new Audio(src);
+        a.preload = "auto";
+        audioCache.current.set(src, a);
+        return a;
+      })();
+
+      const inst = base.cloneNode(true) as HTMLAudioElement;
+      inst.volume = 0.6;
+      void inst.play().catch(() => {
+        // ignore autoplay blocks / interruptions
+      });
+    },
+    [soundEnabled],
+  );
+
+  const toggleSound = useCallback(() => {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("wandr_sound", next ? "1" : "0");
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleMusic = useCallback(() => {
+    setMusicEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("wandr_music", next ? "1" : "0");
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     if (!poweredOn) setStatus("idle");
   }, [poweredOn]);
@@ -90,20 +169,46 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      if (
+        e.key !== "ArrowLeft" &&
+        e.key !== "ArrowRight" &&
+        e.key !== "ArrowUp" &&
+        e.key !== "ArrowDown"
+      )
+        return;
       if (!poweredOn) return;
       if (status !== "idle") return;
 
+      const cols =
+        typeof window !== "undefined" &&
+        typeof window.matchMedia !== "undefined" &&
+        window.matchMedia("(max-width: 520px)").matches
+          ? 1
+          : 3;
+
       const idx = GAME_ORDER.indexOf(currentGame);
-      const dir = e.key === "ArrowRight" ? 1 : -1;
-      const next = GAME_ORDER[(idx + dir + GAME_ORDER.length) % GAME_ORDER.length];
+      let nextIdx = idx;
+      if (e.key === "ArrowRight") {
+        nextIdx = (idx + 1) % GAME_ORDER.length;
+      } else if (e.key === "ArrowLeft") {
+        nextIdx = (idx - 1 + GAME_ORDER.length) % GAME_ORDER.length;
+      } else if (e.key === "ArrowDown") {
+        const candidate = idx + cols;
+        nextIdx = candidate < GAME_ORDER.length ? candidate : idx;
+      } else if (e.key === "ArrowUp") {
+        const candidate = idx - cols;
+        nextIdx = candidate >= 0 ? candidate : idx;
+      }
+
+      const next = GAME_ORDER[nextIdx];
       handleSetCurrentGame(next);
+      playSfx("select");
       e.preventDefault();
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [currentGame, handleSetCurrentGame, poweredOn, status]);
+  }, [currentGame, handleSetCurrentGame, playSfx, poweredOn, status]);
 
   const updateScore = useCallback((game: GameName, score: number) => {
     setScores((prev) => ({ ...prev, [game]: score }));
@@ -130,6 +235,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
         currentGame,
         status,
         poweredOn,
+        soundEnabled,
+        musicEnabled,
         lives,
         level,
         speed,
@@ -139,6 +246,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
         setStatus,
         setPoweredOn,
         togglePower,
+        toggleSound,
+        toggleMusic,
+        playSfx,
         setLives,
         setLevel,
         setSpeed,
