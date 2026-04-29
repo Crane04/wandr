@@ -14,6 +14,9 @@ const BOSS_W = 52,
   BOSS_H = 52;
 const BONUS_W = 18,
   BONUS_H = 18;
+const MAX_LIVES = 8;
+
+const clampLives = (n: number) => Math.max(0, Math.min(MAX_LIVES, n));
 
 interface Bullet {
   x: number;
@@ -751,7 +754,7 @@ export const Tank: React.FC = () => {
 
       // Reached bottom
       if (e.y > H + eh) {
-        livesRef.current--;
+        livesRef.current = clampLives(livesRef.current - 1);
         setDisplayLives(livesRef.current);
         setLives(livesRef.current);
         if (livesRef.current <= 0) {
@@ -770,7 +773,7 @@ export const Tank: React.FC = () => {
       ) {
         playerHitThisFrame = true;
         explode(p.x + TANK_W / 2, p.y + TANK_H / 2, LCD.ink);
-        livesRef.current--;
+        livesRef.current = clampLives(livesRef.current - 1);
         setDisplayLives(livesRef.current);
         setLives(livesRef.current);
         if (livesRef.current <= 0) {
@@ -958,7 +961,7 @@ export const Tank: React.FC = () => {
           }
 
           explode(p.x + TANK_W / 2, p.y + TANK_H / 2, LCD.ink);
-          livesRef.current--;
+          livesRef.current = clampLives(livesRef.current - 1);
           setDisplayLives(livesRef.current);
           setLives(livesRef.current);
           if (livesRef.current <= 0) setStatus("gameover");
@@ -989,7 +992,7 @@ export const Tank: React.FC = () => {
 
             explode(a.x + TANK_W / 2, a.y + TANK_H / 2, LCD.ink);
             // Ally must be protected: costs 2 lives per hit.
-            livesRef.current -= 2;
+            livesRef.current = clampLives(livesRef.current - 2);
             setDisplayLives(livesRef.current);
             setLives(livesRef.current);
             if (livesRef.current <= 0) setStatus("gameover");
@@ -1186,12 +1189,12 @@ export const Tank: React.FC = () => {
           comboShotUntilMsRef.current = performance.now() + COMBO_SHOT_DURATION_MS;
         } else if (bonus.type === "refill") {
           // Refill lives (adds 5 once; still capped).
-          livesRef.current = Math.min(8, livesRef.current + 5);
+          livesRef.current = clampLives(livesRef.current + 5);
           setDisplayLives(livesRef.current);
           setLives(livesRef.current);
         } else {
           // Increase lives (max 8)
-          livesRef.current = Math.min(8, livesRef.current + 1);
+          livesRef.current = clampLives(livesRef.current + 1);
           setDisplayLives(livesRef.current);
           setLives(livesRef.current);
         }
@@ -1225,11 +1228,11 @@ export const Tank: React.FC = () => {
             comboShotUntilMsRef.current =
               performance.now() + COMBO_SHOT_DURATION_MS;
           } else if (bonus.type === "refill") {
-            livesRef.current = Math.min(8, livesRef.current + 5);
+            livesRef.current = clampLives(livesRef.current + 5);
             setDisplayLives(livesRef.current);
             setLives(livesRef.current);
           } else {
-            livesRef.current = Math.min(8, livesRef.current + 1);
+            livesRef.current = clampLives(livesRef.current + 1);
             setDisplayLives(livesRef.current);
             setLives(livesRef.current);
           }
@@ -1282,10 +1285,10 @@ export const Tank: React.FC = () => {
           return false;
         }
         explode(p.x + TANK_W / 2, p.y + TANK_H / 2, LCD.ink);
-        livesRef.current -= 3;
-        setDisplayLives(livesRef.current);
-        setLives(livesRef.current);
-        if (livesRef.current <= 0) setStatus("gameover");
+	        livesRef.current = clampLives(livesRef.current - 3);
+	        setDisplayLives(livesRef.current);
+	        setLives(livesRef.current);
+	        if (livesRef.current <= 0) setStatus("gameover");
         p.x = W / 2 - TANK_W / 2;
         p.y = H - TANK_H - 20;
         return false;
@@ -1314,12 +1317,12 @@ export const Tank: React.FC = () => {
           }
 
           explode(a.x + TANK_W / 2, a.y + TANK_H / 2, LCD.ink);
-          livesRef.current -= 3;
-          setDisplayLives(livesRef.current);
-          setLives(livesRef.current);
-          if (livesRef.current <= 0) setStatus("gameover");
-          return false;
-        }
+	          livesRef.current = clampLives(livesRef.current - 3);
+	          setDisplayLives(livesRef.current);
+	          setLives(livesRef.current);
+	          if (livesRef.current <= 0) setStatus("gameover");
+	          return false;
+	        }
       }
 
       return true;
