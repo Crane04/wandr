@@ -10,8 +10,6 @@ export const RetroShell: React.FC<{
   level: number | null;
   speed: number | null;
   onSelectGame: (g: GameName) => void;
-  topControls?: React.ReactNode;
-  settingsPanel?: React.ReactNode;
   controls?: React.ReactNode;
   children: React.ReactNode;
 }> = ({
@@ -23,8 +21,6 @@ export const RetroShell: React.FC<{
   level,
   speed,
   onSelectGame,
-  topControls,
-  settingsPanel,
   controls,
   children,
 }) => {
@@ -46,9 +42,6 @@ export const RetroShell: React.FC<{
                 crane04
               </a>
             </div>
-            {topControls ? (
-              <div className="retro-screen-controls">{topControls}</div>
-            ) : null}
             <div className="retro-scoreline">
               <span className="retro-score">
                 {highScore.toString().padStart(5, "0")}
@@ -101,10 +94,6 @@ export const RetroShell: React.FC<{
               ) : null}
             </div>
           </div>
-
-          {settingsPanel ? (
-            <div className="retro-settings-host">{settingsPanel}</div>
-          ) : null}
         </div>
 
         <div className="retro-bottom">{controls}</div>

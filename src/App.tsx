@@ -38,8 +38,6 @@ export const App: React.FC = () => {
     speed,
   } = useGame();
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
-
   const [prevStatus, setPrevStatus] = useState<GameStatus>(status);
   useEffect(() => {
     if (status === prevStatus) return;
@@ -75,39 +73,6 @@ export const App: React.FC = () => {
       onSelectGame={(g) => {
         setCurrentGame(g);
       }}
-      topControls={
-        <button
-          type="button"
-          className="retro-top-btn"
-          onClick={() => setSettingsOpen((v) => !v)}
-          aria-pressed={settingsOpen}
-          aria-label="Toggle settings"
-        >
-          ⚙
-        </button>
-      }
-      settingsPanel={
-        settingsOpen ? (
-          <div
-            className="retro-settings-panel"
-            role="dialog"
-            aria-label="Settings"
-          >
-            <div className="retro-settings-row">
-              <div className="retro-settings-title">SETTINGS</div>
-              <div className="retro-settings-actions">
-                <button
-                  type="button"
-                  className="retro-settings-pill"
-                  onClick={() => setSettingsOpen(false)}
-                >
-                  CLOSE
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null
-      }
       controls={<OnScreenControls currentGame={currentGame} />}
     >
       <div className="retro-game-wrap" data-status={status}>
